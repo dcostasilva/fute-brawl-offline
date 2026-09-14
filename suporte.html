@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suporte - Fute-Brawl (Offline)</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .menu-container {
+            max-width: 400px;
+            margin: 20px auto 80px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        .btn-perigo {
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        .btn-voltar {
+            background-color: #90caf9;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            text-align: center;
+        }
+        p {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Fute-Brawl - Suporte</h1>
+    </header>
+
+    <main class="menu-container">
+        <h2>Painel de Manutenção</h2>
+        <p>Ferramentas locais de redefinição e limpeza de dados do jogo.</p>
+        <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+
+        <div style="margin-bottom: 25px;">
+            <h3 style="color: #1565c0; font-size: 1.1rem; margin-bottom: 5px;">Zerar Estatísticas, Títulos, Medalhas e Atletas</h3>
+            <p>Zera todas as estatísticas de partidas, gols, assistências, desarmes, títulos acumulados de clubes, limpa o histórico de partidas de jogadores, remove medalhas/conquistas, restaura a energia para 2, reativa atletas aposentados e sorteia idades aleatórias de 16 a 20 anos.</p>
+            <button class="btn-perigo" onclick="zerarEstatisticasGeraisLocal()">Zerar Estatísticas, Títulos, Medalhas e Energia 🔄</button>
+        </div>
+
+        <div style="margin-bottom: 25px;">
+            <h3 style="color: #1565c0; font-size: 1.1rem; margin-bottom: 5px;">Zerar Finanças</h3>
+            <p>Apaga todo o histórico financeiro local, redefine o saldo bancário de todos os times para 5.000.000 de moedas e limpa os extratos.</p>
+            <button class="btn-perigo" onclick="resetarFinanceiroTimesLocal()">Resetar Financeiro e Histórico 💰</button>
+        </div>
+
+        <div style="margin-bottom: 25px;">
+            <h3 style="color: #1565c0; font-size: 1.1rem; margin-bottom: 5px;">Limpar Partidas</h3>
+            <p>Apaga permanentemente todas as linhas de partidas registradas no dispositivo.</p>
+            <button class="btn-perigo" onclick="apagarTodasPartidasLocal()">Apagar Todas as Partidas 🗑️</button>
+        </div>
+
+        <div style="margin-bottom: 25px;">
+            <h3 style="color: #1565c0; font-size: 1.1rem; margin-bottom: 5px;">Limpar Temporadas</h3>
+            <p>Apaga permanentemente todas as temporadas cadastradas localmente.</p>
+            <button class="btn-perigo" onclick="apagarTodasTemporadasLocal()">Apagar Todas as Temporadas 🗑️</button>
+        </div>
+
+        <button class="btn-voltar" onclick="mudarTela(event, 'times.html')">Voltar para Times</button>
+    </main>
+
+    <nav class="nav-bar">
+        <a href="times.html" class="nav-btn" onclick="mudarTela(event, 'times.html')">
+            <span class="icon">🛡️</span> Times
+        </a>
+        <a href="index.html" class="nav-btn" onclick="mudarTela(event, 'index.html')">
+            <span class="icon">🏠</span> Jogos
+        </a>
+        <a href="rankings.html" class="nav-btn" onclick="mudarTela(event, 'rankings.html')">
+            <span class="icon">🏅</span> Rankings
+        </a>
+    </nav>
+
+    <script>
+        const DB_NAME = "FuteBrawlOfflineDB";
+        const DB_VERSION = 2;
+
+        function abrirBancoLocal() {
+            return new Promise((resolve, reject) => {
+                let request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                request.onupgradeneeded = (event) => {
+                    let db = event.target.result;
+                    if (!db.objectStoreNames.contains("times")) db.createObjectStore("times", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("jogadores")) db.createObjectStore("jogadores", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("partidas")) db.createObjectStore("partidas", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("temporadas")) db.createObjectStore("temporadas", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("historico_financeiro")) db.createObjectStore("historico_financeiro", { keyPath: "id", autoIncrement: true });
+                    if (!db.objectStoreNames.contains("estatisticas_partida_jogadores")) db.createObjectStore("estatisticas_partida_jogadores", { keyPath: "id", autoIncrement: true });
+                    if (!db.objectStoreNames.contains("habilidades_custom")) db.createObjectStore("habilidades_custom", { keyPath: "id" });
+                };
+            });
+        }
+
+        async function salvarLocal(storeName, dados) {
+            let db = await abrirBancoLocal();
+            return new Promise((resolve, reject) => {
+                let transaction = db.transaction(storeName, "readwrite");
+                let store = transaction.objectStore(storeName);
+                if (Array.isArray(dados)) {
+                    dados.forEach(item => store.put(item));
+                } else {
+                    store.put(dados);
+                }
+                transaction.oncomplete = () => resolve(true);
+                transaction.onerror = () => reject(transaction.error);
+            });
+        }
+
+        async function limparStoreLocal(storeName) {
+            let db = await abrirBancoLocal();
+            return new Promise((resolve, reject) => {
+                let transaction = db.transaction(storeName, "readwrite");
+                let store = transaction.objectStore(storeName);
+                let request = store.clear();
+                request.onsuccess = () => resolve(true);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function lerLocal(storeName) {
+            let db = await abrirBancoLocal();
+            return new Promise((resolve, reject) => {
+                let transaction = db.transaction(storeName, "readonly");
+                let store = transaction.objectStore(storeName);
+                let request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => resolve([]);
+            });
+        }
+
+        async function zerarEstatisticasGeraisLocal() {
+            if (!confirm("ATENÇÃO: Deseja realmente zerar estatísticas, títulos, medalhas, reativar aposentados e redefinir as idades dos atletas aleatoriamente entre 16 e 20 anos?")) return;
+
+            let jogadores = await lerLocal("jogadores");
+            jogadores.forEach(j => {
+                j.energia = 2;
+                j.gols = 0;
+                j.partidas = 0;
+                j.assistencia_gols = 0;
+                j.assistencia_defensiva = 0;
+                j.desarmes = 0;
+                j.defesas = 0;
+                j.conquistas = [];
+                j.mundiais = 0;
+                j.regionais = 0;
+                j.liga = 0;
+                j.aposentado = false; // Reativa atletas que estavam aposentados
+                j.idade = Math.floor(Math.random() * (20 - 16 + 1)) + 16; // Idade aleatória entre 16 e 20 (inclusive)
+            });
+            await salvarLocal("jogadores", jogadores);
+            await limparStoreLocal("estatisticas_partida_jogadores");
+
+            let times = await lerLocal("times");
+            times.forEach(t => {
+                t.jogos = 0;
+                t.vitorias = 0;
+                t.empates = 0;
+                t.derrotas = 0;
+                t.gols_pro = 0;
+                t.gols_contra = 0;
+                t.titulos_liga = 0;
+                t.titulos_regional = 0;
+                t.titulos_mundial = 0;
+                t.mundiais = 0;
+                t.regionais = 0;
+                t.liga = 0;
+            });
+            await salvarLocal("times", times);
+
+            alert("🔄 Estatísticas, títulos, medalhas, energias limpos, atletas reativados e idades sorteadas entre 16 e 20 anos com sucesso!");
+        }
+
+        async function resetarFinanceiroTimesLocal() {
+            if (!confirm("Tem certeza que deseja apagar todo o histórico financeiro local e redefinir o dinheiro de todos os times para 5.000.000?")) return;
+
+            await limparStoreLocal("historico_financeiro");
+            let times = await lerLocal("times");
+            times.forEach(t => {
+                t.dinheiro = 5000000;
+                localStorage.removeItem(`financas_${t.id}`);
+            });
+            await salvarLocal("times", times);
+
+            alert("✅ Histórico financeiro limpo e saldo de todos os times redefinido para 5.000.000 (5 Milhões) localmente!");
+        }
+
+        async function apagarTodasPartidasLocal() {
+            if (!confirm("ATENÇÃO: Deseja realmente apagar TODAS as partidas registradas no dispositivo?")) return;
+            await limparStoreLocal("partidas");
+            alert("🗑️ Todas as partidas locais foram apagadas com sucesso!");
+        }
+
+        async function apagarTodasTemporadasLocal() {
+            if (!confirm("ATENÇÃO: Deseja realmente apagar TODAS as temporadas cadastradas no dispositivo?")) return;
+            await limparStoreLocal("partidas");
+            await limparStoreLocal("temporadas");
+            alert("🗑️ Todas as temporadas e partidas vinculadas foram apagadas localmente com sucesso!");
+        }
+
+        function mudarTela(event, destino) {
+            event.preventDefault();
+            if (window.location.pathname.includes(destino)) return;
+            document.body.style.opacity = '0';
+            setTimeout(() => { window.location.href = destino; }, 150);
+        }
+    </script>
+</body>
+</html>

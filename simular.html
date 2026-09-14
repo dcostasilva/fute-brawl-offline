@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulação Rápida (Bastidores) - Fute-Brawl (Offline)</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        header {
+            width: 100%;
+            padding: 15px;
+            background: #1e1e1e;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            border-bottom: 2px solid #2196f3;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.3rem;
+            color: #2196f3;
+        }
+        .painel-simulacao {
+            width: 90%;
+            max-width: 480px;
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        .status-simulacao {
+            font-size: 1.1rem;
+            color: #ffeb3b;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .barra-progresso-container {
+            width: 100%;
+            background-color: #333;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .barra-progresso {
+            height: 20px;
+            background-color: #4caf50;
+            width: 0%;
+            transition: width 0.15s ease;
+        }
+        .lista-resultados {
+            max-height: 350px;
+            overflow-y: auto;
+            background: #121212;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: left;
+        }
+        .resultado-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #263238;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 4px solid #2196f3;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .time-box {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            width: 32%;
+            overflow: hidden;
+        }
+        .time-box.right {
+            flex-direction: row-reverse;
+            text-align: right;
+        }
+        .escudo-min {
+            width: 30px;
+            height: 30px;
+            object-fit: cover;
+            border-radius: 4px;
+            background: #fff;
+            padding: 2px;
+            flex-shrink: 0;
+        }
+        .nome-time {
+            font-size: 0.78rem;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .placar-simulado {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #fff;
+            background: #000;
+            padding: 6px 8px;
+            border-radius: 6px;
+            text-align: center;
+            white-space: nowrap;
+            flex-shrink: 0;
+            width: 32%;
+        }
+        .placar-penaltis-secundario {
+            font-size: 0.7rem;
+            color: #ffeb3b;
+            margin-top: 1px;
+            letter-spacing: 1px;
+        }
+        .btn-concluir {
+            display: none;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4);
+        }
+        .btn-concluir:hover {
+            background-color: #388e3c;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 id="tituloFase">Simulador Rápido (Bastidores)</h1>
+    </header>
+
+    <div class="painel-simulacao">
+        <div class="status-simulacao" id="statusTexto">Processando partidas localmente...</div>
+        
+        <div class="barra-progresso-container">
+            <div class="barra-progresso" id="barraProgresso"></div>
+        </div>
+
+        <div class="lista-resultados" id="listaResultados"></div>
+
+        <button class="btn-concluir" id="btnVoltar" onclick="voltarParaIndexSeguro()">Concluir e Voltar aos Jogos 🏠</button>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://aqfabyfiuxqqqnzfgiys.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxZmFieWZpdXhxcXFuemZnaXlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3NzU1MzAsImV4cCI6MjEwMjM1MTUzMH0.YirbXzZhQgCEyfEPy5gVDqkBMMJQnpZ-KVmlLJxyv9o';
+        const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const DB_NAME = "FuteBrawlOfflineDB";
+        const DB_VERSION = 2;
+
+        function abrirBancoLocal() {
+            return new Promise((resolve, reject) => {
+                let request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                request.onupgradeneeded = (event) => {
+                    let db = event.target.result;
+                    if (!db.objectStoreNames.contains("times")) db.createObjectStore("times", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("jogadores")) db.createObjectStore("jogadores", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("partidas")) db.createObjectStore("partidas", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("temporadas")) db.createObjectStore("temporadas", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("historico_financeiro")) db.createObjectStore("historico_financeiro", { keyPath: "id", autoIncrement: true });
+                    if (!db.objectStoreNames.contains("estatisticas_partida_jogadores")) db.createObjectStore("estatisticas_partida_jogadores", { keyPath: "id", autoIncrement: true });
+                    if (!db.objectStoreNames.contains("habilidades_custom")) db.createObjectStore("habilidades_custom", { keyPath: "id" });
+                };
+            });
+        }
+
+        async function salvarLocal(storeName, dados) {
+            let db = await abrirBancoLocal();
+            return new Promise((resolve, reject) => {
+                let transaction = db.transaction(storeName, "readwrite");
+                let store = transaction.objectStore(storeName);
+                if (Array.isArray(dados)) {
+                    dados.forEach(item => store.put(item));
+                } else {
+                    store.put(dados);
+                }
+                transaction.oncomplete = () => resolve(true);
+                transaction.onerror = () => reject(transaction.error);
+            });
+        }
+
+        async function lerLocal(storeName) {
+            let db = await abrirBancoLocal();
+            return new Promise((resolve, reject) => {
+                let transaction = db.transaction(storeName, "readonly");
+                let store = transaction.objectStore(storeName);
+                let request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => resolve([]);
+            });
+        }
+
+        async function inicializarOuSincronizarDadosLocal() {
+            let timesLocais = await lerLocal("times");
+            if (!timesLocais || timesLocais.length === 0) {
+                const [resTimes, resJog, resPart, resTemp, resHist, resStat] = await Promise.all([
+                    _supabase.from('times').select('*'),
+                    _supabase.from('jogadores').select('*'),
+                    _supabase.from('partidas').select('*'),
+                    _supabase.from('temporadas').select('*'),
+                    _supabase.from('historico_financeiro').select('*'),
+                    _supabase.from('estatisticas_partida_jogadores').select('*')
+                ]);
+
+                if (resTimes.data) await salvarLocal("times", resTimes.data);
+                if (resJog.data) await salvarLocal("jogadores", resJog.data);
+                if (resPart.data) await salvarLocal("partidas", resPart.data);
+                if (resTemp.data) await salvarLocal("temporadas", resTemp.data);
+                if (resHist.data) await salvarLocal("historico_financeiro", resHist.data);
+                if (resStat.data) await salvarLocal("estatisticas_partida_jogadores", resStat.data);
+            }
+        }
+
+        history.pushState(null, null, location.href);
+        window.onpopstate = function () {
+            history.go(1);
+            alert("Aguarde a simulação terminar! Use o botão 'Concluir' no final.");
+        };
+
+        let timesCache = [];
+        let jogadoresCache = [];
+        let partidasParaSimular = [];
+        let temporadaAtualId = null;
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            await inicializarOuSincronizarDadosLocal();
+            await inicializarSimuladorLocal();
+        });
+
+        const normalizar = (str) => (str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/-/g, ' ').trim();
+
+        function calcularRankJogador(j) {
+            let posNorm = normalizar(j.posicao);
+            let valorAtributo = 0;
+
+            if (posNorm.includes('goleiro')) {
+                valorAtributo = j.reflexo || 0;
+            } 
+            else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
+                valorAtributo = j.marcacao || 0;
+            } 
+            else {
+                let vel = j.velocidade || 0;
+                let prec = j.precisao || 0;
+                let assis = j.assistencia || 0;
+                valorAtributo = Math.max(vel, prec, assis);
+            }
+
+            if (valorAtributo <= 0) return { nome: 'Rank-E', pts: 1 };
+            if (valorAtributo === 1) return { nome: 'Rank-D', pts: 2 };
+            if (valorAtributo === 2) return { nome: 'Rank-C', pts: 3 };
+            if (valorAtributo === 3) return { nome: 'Rank-B', pts: 4 };
+            if (valorAtributo === 4) return { nome: 'Rank-A', pts: 5 };
+            if (valorAtributo === 5) return { nome: 'Rank-S', pts: 6 };
+            return { nome: 'Rank nacional', pts: 7 };
+        }
+
+        function escalarEquipeComReservaPorPosicao(elencoTime) {
+            let disponiveis = elencoTime.filter(j => (j.idade || 20) < 40 && !j.aposentado).map(j => ({ 
+                ...j, 
+                rankPts: calcularRankJogador(j).pts, 
+                energiaReal: j.energia ?? 2,
+                posNorm: normalizar(j.posicao)
+            })).sort((a,b) => b.rankPts - a.rankPts);
+
+            function pegarTitularPorPosicao(filtroFn) {
+                let cand = disponiveis.find(x => !selecionados.includes(x) && filtroFn(x) && x.energiaReal > 0);
+                if (!cand) {
+                    cand = disponiveis.find(x => !selecionados.includes(x) && filtroFn(x));
+                }
+                if (cand) selecionados.push(cand);
+            }
+
+            let selecionados = [];
+            pegarTitularPorPosicao(j => j.posNorm.includes('goleiro'));
+            pegarTitularPorPosicao(j => j.posNorm.includes('zagueiro'));
+            pegarTitularPorPosicao(j => j.posNorm.includes('zagueiro'));
+            pegarTitularPorPosicao(j => j.posNorm.includes('meia defensivo'));
+            pegarTitularPorPosicao(j => j.posNorm.includes('meia ofensivo') || (j.posNorm.includes('meia') && !j.posNorm.includes('defensivo')));
+            pegarTitularPorPosicao(j => j.posNorm.includes('atacante'));
+            pegarTitularPorPosicao(j => j.posNorm.includes('atacante'));
+
+            while(selecionados.length < 7 && disponiveis.length > selecionados.length) {
+                let p = disponiveis.find(x => !selecionados.includes(x) && x.energiaReal > 0) || disponiveis.find(x => !selecionados.includes(x));
+                if(p) selecionados.push(p);
+                else break;
+            }
+
+            return selecionados.slice(0, 7);
+        }
+
+        async function inicializarSimuladorLocal() {
+            let temporadasLocal = await lerLocal("temporadas");
+            let tempAtiva = temporadasLocal.find(t => t.status === 'em_andamento') || temporadasLocal[temporadasLocal.length - 1];
+            temporadaAtualId = tempAtiva ? tempAtiva.id : 1;
+
+            timesCache = await lerLocal("times");
+            jogadoresCache = await lerLocal("jogadores");
+            let partidasLocal = await lerLocal("partidas");
+
+            let todasPendentes = partidasLocal.filter(p => p.temporada_id === temporadaAtualId && p.status === 'pendente' && p.time_a_id && p.time_b_id);
+            todasPendentes.sort((a,b) => a.ordem_fila - b.ordem_fila);
+
+            if (todasPendentes.length === 0) {
+                document.getElementById('statusTexto').innerText = "Nenhuma partida pendente!";
+                document.getElementById('btnVoltar').style.display = 'block';
+                return;
+            }
+
+            let partidaRef = todasPendentes[0];
+            document.getElementById('tituloFase').innerText = `Simulação Rápida - ${partidaRef.fase}`;
+
+            partidasParaSimular = todasPendentes.slice(0, 15);
+
+            executarSimulacaoEmLoteLocal();
+        }
+
+        async function executarSimulacaoEmLoteLocal() {
+            let total = partidasParaSimular.length;
+            if (total === 0) {
+                document.getElementById('statusTexto').innerText = "Nenhuma partida pronta para simular!";
+                document.getElementById('btnVoltar').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('statusTexto').innerText = `Simulando ${total} confrontos nos bastidores...`;
+
+            for (let i = 0; i < total; i++) {
+                let p = partidasParaSimular[i];
+                await simularConfrontoOcultoExatoCampoLocal(p);
+
+                let progresso = ((i + 1) / total) * 100;
+                document.getElementById('barraProgresso').style.width = `${progresso}%`;
+            }
+
+            document.getElementById('statusTexto').innerText = "Simulação em Lote Concluída!";
+            document.getElementById('statusTexto').style.color = "#4caf50";
+            document.getElementById('btnVoltar').style.display = 'block';
+        }
+
+        function obterHabilidadeEfetiva(jog, meuTimeElenco, adversarioElenco) {
+            let hab = jog.habilidade_id;
+            let temFullCounter = adversarioElenco.some(d => d.habilidade_id === 'za_5');
+            if (temFullCounter && hab !== 'za_5') return null;
+
+            if (hab === 'mo_4') {
+                let rivalComHab = adversarioElenco.find(j => j.habilidade_id && j.habilidade_id !== 'mo_4');
+                if (rivalComHab) return rivalComHab.habilidade_id;
+            }
+            return hab;
+        }
+
+        function sortearDuplaAtacante(elenco) {
+            let atacantes = elenco.filter(j => normalizar(j.posicao).includes('atacante'));
+            let moObj = elenco.find(j => normalizar(j.posicao).includes('meia ofensivo') || (normalizar(j.posicao).includes('meia') && !normalizar(j.posicao).includes('defensivo')));
+            
+            function escolherAtletaPonderado() {
+                let rand = Math.random() * 100;
+                if (rand < 35 && atacantes.length > 0) return atacantes[0];
+                if (rand < 70 && atacantes.length > 1) return atacantes[1] || atacantes[0];
+                if (rand < 100 && moObj) return moObj;
+                return atacantes[0] || elenco[0];
+            }
+
+            let p1 = escolherAtletaPonderado();
+            let p2 = escolherAtletaPonderado();
+            while(p1.id === p2.id && elenco.length > 1) {
+                p2 = escolherAtletaPonderado();
+            }
+            return [p1, p2];
+        }
+
+        async function simularConfrontoOcultoExatoCampoLocal(partida) {
+            let timeA = timesCache.find(x => x.id === partida.time_a_id);
+            let timeB = timesCache.find(x => x.id === partida.time_b_id);
+            if (!timeA || !timeB) return;
+
+            jogadoresCache = await lerLocal("jogadores");
+            let elencoA = jogadoresCache.filter(j => j.time_id === timeA.id);
+            let elencoB = jogadoresCache.filter(j => j.time_id === timeB.id);
+
+            let ativosA = elencoA.filter(j => (j.idade || 20) < 40 && !j.aposentado);
+            let ativosB = elencoB.filter(j => (j.idade || 20) < 40 && !j.aposentado);
+            if (ativosA.length < 14 || ativosB.length < 14) return;
+
+            let titularesA = escalarEquipeComReservaPorPosicao(elencoA);
+            let titularesB = escalarEquipeComReservaPorPosicao(elencoB);
+
+            let idsTitularesA = new Set(titularesA.map(t => t.id));
+            let idsTitularesB = new Set(titularesB.map(t => t.id));
+
+            let jogadoresLocal = await lerLocal("jogadores");
+
+            if (partida.fase === 'Mundial') {
+                for (let jog of elencoA) {
+                    let jDb = jogadoresLocal.find(x => x.id === jog.id);
+                    if (jDb && (jDb.energia ?? 2) < 2) { jDb.energia = 2; await salvarLocal("jogadores", jDb); }
+                }
+                for (let jog of elencoB) {
+                    let jDb = jogadoresLocal.find(x => x.id === jog.id);
+                    if (jDb && (jDb.energia ?? 2) < 2) { jDb.energia = 2; await salvarLocal("jogadores", jDb); }
+                }
+            } else {
+                for (let jog of elencoA) {
+                    let jDb = jogadoresLocal.find(x => x.id === jog.id);
+                    if (jDb) {
+                        if (idsTitularesA.has(jDb.id)) {
+                            jDb.energia = Math.max(0, (jDb.energia ?? 2) - 1);
+                        } else {
+                            jDb.energia = 2;
+                        }
+                        await salvarLocal("jogadores", jDb);
+                    }
+                }
+                for (let jog of elencoB) {
+                    let jDb = jogadoresLocal.find(x => x.id === jog.id);
+                    if (jDb) {
+                        if (idsTitularesB.has(jDb.id)) {
+                            jDb.energia = Math.max(0, (jDb.energia ?? 2) - 1);
+                        } else {
+                            jDb.energia = 2;
+                        }
+                        await salvarLocal("jogadores", jDb);
+                    }
+                }
+            }
+
+            function simularRodadaAtaques(sequencia) {
+                let gA = 0, gB = 0;
+                for (let timeAtq of sequencia) {
+                    let atacantesTime = timeAtq === 'A' ? titularesA : titularesB;
+                    let defensoresTime = timeAtq === 'A' ? titularesB : titularesA;
+
+                    if (atacantesTime.length < 7 || defensoresTime.length < 7) continue;
+
+                    let duplaAtq = sortearDuplaAtacante(atacantesTime);
+                    let at1 = duplaAtq[0], at2 = duplaAtq[1];
+
+                    let adversarioElenco = defensoresTime;
+                    let equipeAtacanteElenco = atacantesTime;
+                    let timeDefensorElenco = defensoresTime;
+                    let temFullCounter = adversarioElenco.some(d => d.habilidade_id === 'za_5');
+                    let temJogadaCoringa = [...titularesA, ...titularesB].some(j => j.habilidade_id === 'at_5');
+
+                    let hab1 = obterHabilidadeEfetiva(at1, equipeAtacanteElenco, adversarioElenco);
+                    let hab2 = obterHabilidadeEfetiva(at2, equipeAtacanteElenco, adversarioElenco);
+
+                    let atqComImpacto = duplaAtq.find(a => obterHabilidadeEfetiva(a, equipeAtacanteElenco, adversarioElenco) === 'at_2');
+                    let pulaZagaDireto = atqComImpacto && Math.random() < 0.50;
+
+                    if (!pulaZagaDireto) {
+                        let bonusVel1 = (hab1 === 'at_1' && !temJogadaCoringa) ? 4 : 0;
+                        let bonusVel2 = (hab2 === 'at_1' && !temJogadaCoringa) ? 4 : 0;
+                        let vel1 = temJogadaCoringa ? 0 : ((at1.velocidade || 0) + bonusVel1);
+                        let vel2 = temJogadaCoringa ? 0 : ((at2.velocidade || 0) + bonusVel2);
+
+                        let sorteio1 = (hab1 === 'at_1' && !temJogadaCoringa) ? (Math.floor(Math.random() * 20) + 1 + vel1 + 4) : ((Math.floor(Math.random() * 20) + 1) + vel1);
+                        let sorteio2 = (hab2 === 'at_1' && !temJogadaCoringa) ? (Math.floor(Math.random() * 20) + 1 + vel2 + 4) : ((Math.floor(Math.random() * 20) + 1) + vel2);
+
+                        let totalAtq = sorteio1 + sorteio2;
+
+                        let b1 = defensoresTime[5] || defensoresTime[0];
+                        let b2 = defensoresTime[6] || defensoresTime[1];
+                        let defHab1 = obterHabilidadeEfetiva(b1, timeDefensorElenco, equipeAtacanteElenco);
+                        let defHab2 = obterHabilidadeEfetiva(b2, timeDefensorElenco, equipeAtacanteElenco);
+
+                        let bonusMarc1 = (defHab1 === 'za_1' && !temJogadaCoringa) ? 4 : 0;
+                        let bonusMarc2 = (defHab2 === 'za_1' && !temJogadaCoringa) ? 4 : 0;
+
+                        let totalDef1 = (Math.floor(Math.random() * 10) + 1) + (temJogadaCoringa ? 0 : ((b1.marcacao || 0) + bonusMarc1)) + 
+                                        (Math.floor(Math.random() * 10) + 1) + (temJogadaCoringa ? 0 : ((b2.marcacao || 0) + bonusMarc2));
+
+                        if (totalAtq <= totalDef1) {
+                            b1.desarmesTemp = (b1.desarmesTemp || 0) + 1;
+                            if (b2) b2.assistDefTemp = (b2.assistDefTemp || 0) + 1;
+                            continue;
+                        }
+
+                        let m1 = defensoresTime[3] || defensoresTime[0];
+                        let m2 = defensoresTime[4] || defensoresTime[1];
+                        let mHab1 = obterHabilidadeEfetiva(m1, timeDefensorElenco, equipeAtacanteElenco);
+                        let mHab2 = obterHabilidadeEfetiva(m2, timeDefensorElenco, equipeAtacanteElenco);
+                        let p1 = normalizar(m1.posicao);
+                        let p2 = normalizar(m2.posicao);
+
+                        let tetoM1 = p1.includes('meia') ? 15 : 20;
+                        let tetoM2 = p2.includes('meia') ? 15 : 20;
+                        let temDesarmeCoordenado = timeDefensorElenco.some(j => obterHabilidadeEfetiva(j, timeDefensorElenco, equipeAtacanteElenco) === 'md_2');
+                        let temDobra1 = (mHab1 === 'md_5' && (p1.includes('meia') || p1.includes('defensivo')));
+                        let temDobra2 = (mHab2 === 'md_5' && (p2.includes('meia') || p2.includes('defensivo')));
+
+                        if (temDobra1) tetoM1 = 30;
+                        if (temDobra2) tetoM2 = 30;
+                        if (temDesarmeCoordenado) { if(tetoM1 < 22) tetoM1 = 22; if(tetoM2 < 22) tetoM2 = 22; }
+
+                        let totalDefMeio = (Math.floor(Math.random() * tetoM1) + 1) + (temJogadaCoringa ? 0 : (m1.marcacao || 0)) + 
+                                           (Math.floor(Math.random() * tetoM2) + 1) + (temJogadaCoringa ? 0 : (m2.marcacao || 0));
+
+                        if (totalAtq <= totalDefMeio) {
+                            m1.desarmesTemp = (m1.desarmesTemp || 0) + 1;
+                            if (m2) m2.assistDefTemp = (m2.assistDefTemp || 0) + 1;
+                            continue;
+                        }
+
+                        let z1 = defensoresTime[1] || defensoresTime[0];
+                        let z2 = defensoresTime[2] || defensoresTime[1];
+                        let zHab1 = obterHabilidadeEfetiva(z1, timeDefensorElenco, equipeAtacanteElenco);
+                        let zHab2 = obterHabilidadeEfetiva(z2, timeDefensorElenco, equipeAtacanteElenco);
+
+                        let totalDefZaga = (Math.floor(Math.random() * 20) + 1) + (temJogadaCoringa ? 0 : (z1.marcacao || 0)) + 
+                                           (Math.floor(Math.random() * 20) + 1) + (temJogadaCoringa ? 0 : (z2.marcacao || 0));
+
+                        if ((zHab1 === 'za_2' || zHab2 === 'za_2') && !temFullCounter) {
+                            if (totalAtq <= totalDefZaga) {
+                                z1.desarmesTemp = (z1.desarmesTemp || 0) + 1;
+                                if (z2) z2.assistDefTemp = (z2.assistDefTemp || 0) + 1;
+                                continue;
+                            }
+                            let sorteioZaga2Atq = Math.floor(Math.random() * 20) + 1 + vel1 + Math.floor(Math.random() * 20) + 1 + vel2;
+                            let sorteioZaga2Def = Math.floor(Math.random() * 20) + 1 + (z1.marcacao || 0) + Math.floor(Math.random() * 20) + 1 + (z2.marcacao || 0);
+                            if (sorteioZaga2Atq <= sorteioZaga2Def) {
+                                z1.desarmesTemp = (z1.desarmesTemp || 0) + 1;
+                                if (z2) z2.assistDefTemp = (z2.assistDefTemp || 0) + 1;
+                                continue;
+                            }
+                        }
+
+                        if (totalAtq <= totalDefZaga) {
+                            z1.desarmesTemp = (z1.desarmesTemp || 0) + 1;
+                            if (z2) z2.assistDefTemp = (z2.assistDefTemp || 0) + 1;
+                            continue;
+                        }
+                    }
+
+                    let artilheiro = duplaAtq[Math.floor(Math.random() * duplaAtq.length)];
+                    let assistente = duplaAtq.find(x => x.id !== artilheiro.id) || duplaAtq[0];
+                    
+                    let habArt = obterHabilidadeEfetiva(artilheiro, equipeAtacanteElenco, adversarioElenco);
+                    let habAssis = obterHabilidadeEfetiva(assistente, equipeAtacanteElenco, adversarioElenco);
+
+                    let bonusPrec = (habArt === 'at_2' && !temJogadaCoringa) ? 4 : 0;
+                    let precisaoTotal = temJogadaCoringa ? 0 : ((artilheiro.precisao || 0) + bonusPrec);
+                    let assistenciaTotal = temJogadaCoringa ? 0 : (assistente.assistencia || 0);
+
+                    let tetoChute = (habAssis === 'mo_3' && !temFullCounter && !temJogadaCoringa) ? 30 : 20;
+                    let totalChuteFinal = (Math.floor(Math.random() * tetoChute) + 1) + precisaoTotal + assistenciaTotal;
+
+                    let goleiro = defensoresTime[0];
+                    let habGol = obterHabilidadeEfetiva(goleiro, timeDefensorElenco, equipeAtacanteElenco);
+                    let tetoDefesa = (habGol === 'go_1' && !temJogadaCoringa) ? 30 : 20;
+                    let bonusReflexo = (habGol === 'go_2' && !temJogadaCoringa) ? 4 : 0;
+                    let reflexoTotal = temJogadaCoringa ? 0 : ((goleiro.reflexo || 0) + bonusReflexo);
+
+                    let defesaGoleiroRolada = Math.floor(Math.random() * tetoDefesa) + 1;
+                    if (habArt === 'at_3') reflexoTotal = 0;
+                    if (habGol === 'go_3') totalChuteFinal -= precisaoTotal;
+
+                    let totalGolDefesa = defesaGoleiroRolada + reflexoTotal;
+                    if (habGol === 'go_4') totalChuteFinal = Math.floor(totalChuteFinal / 2);
+                    if (habGol === 'mo_5') totalGolDefesa = Math.floor(totalGolDefesa / 2);
+
+                    if (totalChuteFinal > totalGolDefesa) {
+                        if (timeAtq === 'A') gA++;
+                        else gB++;
+                        artilheiro.golsTemp = (artilheiro.golsTemp || 0) + 1;
+                        assistente.assistenciaGolsTemp = (assistente.assistenciaGolsTemp || 0) + 1;
+                    } else {
+                        goleiro.defesasTemp = (goleiro.defesasTemp || 0) + 1;
+                    }
+                }
+                return { gA, gB };
+            }
+
+            let seqNormal = ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B', 'A', 'B', 'B', 'A', 'B', 'A', 'B', 'A', 'B', 'A', 'B', 'A'];
+            let resNorm = simularRodadaAtaques(seqNormal);
+            let golsA = resNorm.gA;
+            let golsB = resNorm.gB;
+            let golsRegA = golsA, golsRegB = golsB;
+
+            let textoPenaltisCard = "";
+            let penAVal = null, penBVal = null;
+
+            if (golsA === golsB && partida.fase === 'Mundial') {
+                let seqProrrog = ['A', 'B', 'A', 'B', 'B', 'A', 'B', 'A'];
+                let resPror = simularRodadaAtaques(seqProrrog);
+                golsA += resPror.gA;
+                golsB += resPror.gB;
+                golsRegA = golsA;
+                golsRegB = golsB;
+
+                if (golsA === golsB) {
+                    let penA = 0, penB = 0;
+                    for (let i = 0; i < 5; i++) {
+                        if (Math.random() < 0.60) penA++;
+                        if (Math.random() < 0.60) penB++;
+                    }
+                    while (penA === penB) {
+                        if (Math.random() < 0.60) penA++;
+                        if (Math.random() < 0.60) penB++;
+                    }
+                    penAVal = penA;
+                    penBVal = penB;
+                    textoPenaltisCard = `<div class="placar-penaltis-secundario">(${penA}) x (${penB})</div>`;
+                }
+            }
+
+            let partidasLocal = await lerLocal("partidas");
+            let pObj = partidasLocal.find(x => x.id === partida.id);
+            if (pObj) {
+                pObj.gols_a = golsRegA;
+                pObj.gols_b = golsRegB;
+                if (penAVal !== null && penBVal !== null) {
+                    pObj.pen_a = penAVal;
+                    pObj.pen_b = penBVal;
+                }
+                pObj.status = 'concluido';
+                await salvarLocal("partidas", pObj);
+            }
+
+            let todosTitulares = [...titularesA, ...titularesB];
+            for (let jog of todosTitulares) {
+                await salvarLocal("estatisticas_partida_jogadores", {
+                    partida_id: parseInt(partida.id),
+                    jogador_id: jog.id,
+                    gols: jog.golsTemp || 0,
+                    assistencias_gols: jog.assistenciaGolsTemp || 0,
+                    assistencia_def: jog.assistDefTemp || 0,
+                    desarmes: jog.desarmesTemp || 0,
+                    defesas: jog.defesasTemp || 0,
+                    partidas: 1
+                });
+            }
+
+            await processarFinanceiroEstatisticasTime(timeA, timeB, golsRegA, golsRegB, partida.fase, partida.categoria);
+            await processarFinanceiroEstatisticasTime(timeB, timeA, golsRegB, golsRegA, partida.fase, partida.categoria);
+
+            let lista = document.getElementById('listaResultados');
+            lista.innerHTML += `
+                <div class="resultado-card">
+                    <div class="time-box">
+                        <img src="${timeA.escudo || 'https://via.placeholder.com/150'}" class="escudo-min">
+                        <span class="nome-time">${timeA.nome}</span>
+                    </div>
+                    <div class="placar-simulado">
+                        <div>${golsRegA} x ${golsRegB}</div>
+                        ${textoPenaltisCard}
+                    </div>
+                    <div class="time-box right">
+                        <img src="${timeB.escudo || 'https://via.placeholder.com/150'}" class="escudo-min">
+                        <span class="nome-time">${timeB.nome}</span>
+                    </div>
+                </div>
+            `;
+            lista.scrollTop = lista.scrollHeight;
+        }
+
+        async function processarFinanceiroEstatisticasTime(timeReal, timeAdversario, golsPro, golsContra, fase, categoria) {
+            let ganho = 10000;
+            let v = 0, e = 0, d = 0;
+            let statusTexto = "Derrota";
+
+            if (golsPro > golsContra) { v = 1; ganho = 50000; statusTexto = "Vitória"; }
+            else if (golsPro === golsContra) { e = 1; ganho = 30000; statusTexto = "Empate"; }
+            else { d = 1; ganho = 10000; statusTexto = "Derrota"; }
+
+            let timesLocal = await lerLocal("times");
+            let tObj = timesLocal.find(x => x.id === timeReal.id);
+
+            let saldoInicial = tObj ? (tObj.dinheiro || 1000000) : 1000000;
+            let saldoFinal = saldoInicial + ganho;
+
+            if (tObj) {
+                tObj.jogos = (tObj.jogos || 0) + 1;
+                tObj.vitorias = (tObj.vitorias || 0) + v;
+                tObj.empates = (tObj.empates || 0) + e;
+                tObj.derrotas = (tObj.derrotas || 0) + d;
+                tObj.gols_pro = (tObj.gols_pro || 0) + golsPro;
+                tObj.gols_contra = (tObj.gols_contra || 0) + golsContra;
+                tObj.dinheiro = saldoFinal;
+                await salvarLocal("times", tObj);
+            }
+
+            let infoFaseCategoria = `${categoria || 'Campeonato'} - ${fase || 'Fase Única'}`;
+
+            await salvarLocal("historico_financeiro", {
+                time_id: timeReal.id,
+                tipo: 'ganho',
+                descricao: `${infoFaseCategoria} - ${statusTexto} (Saldo Inicial: R$ ${saldoInicial.toLocaleString('pt-BR')} | Premiação: ${ganho === 50000 ? 'Vitória +50k' : (ganho === 30000 ? 'Empate +30k' : 'Derrota +10k')})`,
+                valor: ganho,
+                saldo_apos: saldoFinal
+            });
+        }
+
+        function voltarParaIndexSeguro() {
+            window.onpopstate = null;
+            window.location.replace('index.html');
+        }
+    </script>
+</body>
+</html>

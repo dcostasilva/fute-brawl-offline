@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partida no Campo - Fute-Brawl (Offline)</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+        }
+        header {
+            width: 100%;
+            padding: 10px;
+            background: #1e1e1e;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #2196f3;
+        }
+        .placar-topo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 450px;
+            background: #1e1e1e;
+            padding: 10px 0;
+            font-weight: bold;
+            border-bottom: 2px solid #333;
+        }
+        .placar-linha-principal {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            width: 100%;
+            font-size: 1rem;
+        }
+        .placar-penaltis-secundario {
+            font-size: 0.8rem;
+            color: #ffeb3b;
+            margin-top: 4px;
+            letter-spacing: 1px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .bloco-penaltis-time {
+            display: flex;
+            gap: 4px;
+            margin-top: 2px;
+        }
+        .aviso-fim-partida {
+            display: none;
+            width: 90%;
+            max-width: 400px;
+            background: linear-gradient(135deg, #1b5e20, #2e7d32);
+            color: #fff;
+            text-align: center;
+            padding: 14px;
+            border-radius: 10px;
+            margin: 10px auto;
+            border: 2px solid #66bb6a;
+            box-shadow: 0 4px 15px rgba(46, 125, 50, 0.5);
+            font-size: 0.95rem;
+            font-weight: bold;
+        }
+        .btn-ok-aviso {
+            background-color: #ff9800;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn-ok-aviso:hover {
+            background-color: #f57c00;
+        }
+        .campo-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            height: 600px;
+            background-image: url('estadio/campo.jpg');
+            background-size: cover;
+            background-position: center;
+            border: 3px solid #2e7d32;
+            margin: 10px auto;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        .jogador-camisa {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            cursor: pointer;
+        }
+        .img-camisa-clube {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+            display: block;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.9));
+            background: transparent;
+            border: none;
+            padding: 0;
+            position: absolute;
+            top: 0;
+        }
+        .jogador-camisa small {
+            color: #fff;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 0.52rem;
+            white-space: nowrap;
+            font-weight: bold;
+            position: absolute;
+            bottom: 20px;
+            z-index: 5;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.8);
+            border: 1px solid rgba(255,255,255,0.4);
+        }
+        .bola-centro {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1rem;
+            z-index: 15;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.9));
+            transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .painel-jogo-ativo {
+            width: 90%;
+            max-width: 400px;
+            background: #1e1e1e;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 2px solid #2196f3;
+        }
+        .narrativa-box {
+            background: #121212;
+            color: #00ffcc;
+            font-family: monospace;
+            padding: 8px;
+            border-radius: 6px;
+            height: 110px;
+            overflow-y: auto;
+            font-size: 0.75rem;
+            margin-bottom: 8px;
+            border: 1px solid #333;
+            line-height: 1.3;
+        }
+        .painel-sorteio-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background: #263238;
+            padding: 6px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 0.78rem;
+            font-weight: bold;
+        }
+        .btn-acao-partida {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+        }
+        .btn-acao-partida:hover {
+            background-color: #1976d2;
+        }
+        .btn-voltar-campo {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px auto 20px auto;
+            display: block;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            text-decoration: none;
+        }
+        .btn-voltar-campo:hover {
+            background-color: #d32f2f;
+        }
+        .tooltip-balao {
+            position: absolute;
+            background: #222;
+            color: #fff;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            z-index: 9999;
+            max-width: 230px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+            text-align: left;
+            border: 1px solid #444;
+        }
+        .estrela-habilidade {
+            cursor: pointer;
+            font-size: 0.65rem;
+            margin-left: 2px;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 id="tituloFasePartida">Partida Oficial (Offline)</h1>
+    </header>
+
+    <div class="placar-topo">
+        <div class="placar-linha-principal">
+            <span id="labelTimeA">Time A</span>
+            <span id="placarGols">0 X 0</span>
+            <span id="labelTimeB">Time B</span>
+        </div>
+        <div class="placar-penaltis-secundario" id="placarPenaltisSecundario" style="display:none;"></div>
+    </div>
+
+    <div class="aviso-fim-partida" id="avisoFimPartida">
+        🏆 FIM DE PARTIDA!<br>Dados, estatísticas e finanças salvos com sucesso localmente.
+        <br>
+        <button class="btn-ok-aviso" onclick="fecharAvisoFim()">OK 👍</button>
+    </div>
+
+    <div class="painel-jogo-ativo" id="painelJogoAtivo">
+        <div style="font-size: 0.8rem; text-align: center; margin-bottom: 5px; color: #90caf9;" id="statusTurnoLabel">Aguardando início...</div>
+        <div class="narrativa-box" id="narrativaBox">Aguardando início da partida...</div>
+        
+        <div class="painel-sorteio-box" id="caixaSorteioUI" style="display:flex;">
+            <span id="textoComparativoSorteio">Aguardando lance...</span>
+        </div>
+
+        <button class="btn-acao-partida" id="btnAcaoTurno" onclick="executarProximoPassoTurno()">Iniciar Partida ⚽</button>
+    </div>
+
+    <div class="campo-container" id="campoVisual">
+        <div class="bola-centro" id="bolaElemento" style="top:50%; left:50%;">⚽</div>
+    </div>
+
+    <a href="simular.html" class="btn-voltar-campo" id="btnVoltarJogo" style="display:none;">Voltar para o Simulador de Jogos ⏩</a>
+
+    <script>
+        const SUPABASE_URL = 'https://aqfabyfiuxqqqnzfgiys.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxZmFieWZpdXhxcXFuemZnaXlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3NzU1MzAsImV4cCI6MjEwMjM1MTUzMH0.YirbXzZhQgCEyfEPy5gVDqkBMMJQnpZ-KVmlLJxyv9o';
+        const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const DB_NAME = "FuteBrawlOfflineDB";
+        const DB_VERSION = 2;
+
+        const listaCompletaHabilidades = [
+            { id: "at_1", nome: "Flash" }, { id: "at_2", nome: "Impacto" }, { id: "at_3", nome: "Olhos do Imperador" }, { id: "at_5", nome: "Jogada Coringa" },
+            { id: "mo_3", nome: "Garçom Impecável" }, { id: "mo_4", nome: "Clone" },
+            { id: "md_2", nome: "Desarme Coordenado" }, { id: "md_5", nome: "Dobra de Valor" },
+            { id: "za_1", nome: "Muralha" }, { id: "za_2", nome: "Barreira Infernal" }, { id: "za_4", nome: "Devorador de Às" }, { id: "za_5", nome: "Full Counter" },
+            { id: "go_1", nome: "Muro de Ferro" }, { id: "go_2", nome: "Instinto Superior" }
+        ];
+
+        const fallbackHabilidadesDesc = {
+            "at_1": "+4 de bônus na velocidade.", "at_2": "+4 de precisão (50% chance de chutar antes ou passar a zaga).", "at_3": "Anula 100% o reflexo do goleiro adversário.",
+            "at_5": "Reduz todos os atributos em campo a 0, decidindo apenas na sorte.", "mo_3": "Eleva o dado de chute do colega assistido para D30.",
+            "mo_4": "Copia a habilidade do adversário em campo.", "md_2": "Muda o dado de defesa de todos os aliados para D22 (exceto exceções maiores).",
+            "md_5": "Utiliza dado de D30 na defesa para si e MO aliado.", "za_1": "+4 de marcação para si.",
+            "za_2": "Obriga a dupla rival a vencer a zaga duas vezes.", "za_4": "+1 de marcação a cada desarme bem-sucedido.",
+            "za_5": "Anula as habilidades de todos os adversários na partida inteira.", "go_1": "Utiliza dado de D30 em sua defesa.", "go_2": "+4 de bônus no reflexo."
+        };
+
+        function abrirBancoLocal() {
+            return new Promise((resolve, reject) => {
+                let request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                request.onupgradeneeded = (event) => {
+                    let db = event.target.result;
+                    if (!db.objectStoreNames.contains("times")) db.createObjectStore("times", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("jogadores")) db.createObjectStore("jogadores", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("partidas")) db.createObjectStore("partidas", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("temporadas")) db.createObjectStore("temporadas", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("historico_financeiro")) db.createObjectStore("historico_financeiro", { keyPath: "id", autoIncrement: true });
+                    if (!db.objectStoreNames.contains("estatisticas_partida_jogadores")) db.createObjectStore("estatisticas_partida_jogadores", { keyPath: "id", autoIncrement: true });
+                    if (!db.objectStoreNames.contains("habilidades_custom")) db.createObjectStore("habilidades_custom", { keyPath: "id" });
+                };
+            });
+        }
+
+        async function salvarLocal(storeName, dados) {
+            let db = await abrirBancoLocal();
+            return new Promise((resolve, reject) => {
+                let transaction = db.transaction(storeName, "readwrite");
+                let store = transaction.objectStore(storeName);
+                if (Array.isArray(dados)) {
+                    dados.forEach(item => store.put(item));
+                } else {
+                    store.put(dados);
+                }
+                transaction.oncomplete = () => resolve(true);
+                transaction.onerror = () => reject(transaction.error);
+            });
+        }
+
+        async function lerLocal(storeName) {
+            let db = await abrirBancoLocal();
+            return new Promise((resolve, reject) => {
+                let transaction = db.transaction(storeName, "readonly");
+                let store = transaction.objectStore(storeName);
+                let request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => resolve([]);
+            });
+        }
+
+        let partidaId = parseInt(localStorage.getItem('partida_ativa_id'));
+        let partidaDados = null;
+        let timeA = null, timeB = null;
+        let elencoA = [], elencoB = [];
+        let titularesA = [], titularesB = [];
+        let uniformeTimeA = '';
+        let uniformeTimeB = '';
+        
+        let gameState = {
+            golsA: 0,
+            golsB: 0,
+            tempo: 1, 
+            indiceSequencia: 0, 
+            pausadoIntervalo: false,
+            faseBarreira: 'inicio',
+            duplaAtacante: [], 
+            barreiraAtualJogadores: [],
+            goleiroAdversario: null,
+            timeComAtaque: 'A',
+            etapaAvanco: 0,
+            emProrrogacao: false,
+            emPenaltis: false,
+            tentativaBarreiraInfernalDupla: false,
+            penaltisState: { cobrancaIndex: 0, tirosA: [], tirosB: [], vezA: true, penaltiFaseFinalizada: false }
+        };
+
+        const sequenciaPrimeiroTempo = ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B', 'A', 'B'];
+        const sequenciaSegundoTempo = ['B', 'A', 'B', 'A', 'B', 'A', 'B', 'A', 'B', 'A'];
+        const sequenciaProrrogacao1 = ['A', 'B', 'A', 'B'];
+        const sequenciaProrrogacao2 = ['B', 'A', 'B', 'A'];
+
+        const baseCoordsA = [
+            { x: 50, y: 92 }, { x: 32, y: 81 }, { x: 68, y: 81 },
+            { x: 32, y: 69 }, { x: 68, y: 69 }, { x: 32, y: 57 }, { x: 68, y: 57 }
+        ];
+
+        const baseCoordsB = [
+            { x: 50, y: 8 }, { x: 32, y: 20 }, { x: 68, y: 20 },
+            { x: 32, y: 32 }, { x: 68, y: 32 }, { x: 32, y: 43 }, { x: 68, y: 43 }
+        ];
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            if (!partidaId) {
+                alert("Nenhuma partida selecionada!");
+                window.location.href = 'index.html';
+                return;
+            }
+            await carregarDadosPartidaNoCampoLocal();
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.tooltip-balao') && !e.target.closest('.jogador-camisa')) {
+                    removerBalaoEstrela();
+                }
+            });
+        });
+
+        const normalizar = (str) => (str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/-/g, ' ').trim();
+
+        function obterSiglaPosicao(pos) {
+            let p = normalizar(pos);
+            if (p.includes('goleiro')) return 'GO';
+            if (p.includes('zagueiro')) return 'ZA';
+            if (p.includes('meia defensivo')) return 'MD';
+            if (p.includes('meia ofensivo') || (p.includes('meia') && !p.includes('defensiv'))) return 'MO';
+            if (p.includes('meia')) return 'MO';
+            if (p.includes('atacante')) return 'AT';
+            return 'JG';
+        }
+
+        function calcularRankJogador(j) {
+            let posNorm = normalizar(j.posicao);
+            let valorAtributo = 0;
+
+            if (posNorm.includes('goleiro')) {
+                valorAtributo = j.reflexo || 0;
+            } 
+            else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
+                valorAtributo = j.marcacao || 0;
+            } 
+            else {
+                let vel = j.velocidade || 0;
+                let prec = j.precisao || 0;
+                let assis = j.assistencia || 0;
+                valorAtributo = Math.max(vel, prec, assis);
+            }
+
+            if (valorAtributo <= 0) return { nome: 'Rank-E', cor: '#1976d2', pts: 1 };
+            if (valorAtributo === 1) return { nome: 'Rank-D', cor: '#388e3c', pts: 2 };
+            if (valorAtributo === 2) return { nome: 'Rank-C', cor: '#fbc02d', pts: 3 };
+            if (valorAtributo === 3) return { nome: 'Rank-B', cor: '#f57c00', pts: 4 };
+            if (valorAtributo === 4) return { nome: 'Rank-A', cor: '#d32f2f', pts: 5 };
+            if (valorAtributo === 5) return { nome: 'Rank-S', cor: '#7b1fa2', pts: 6 };
+            return { nome: 'Rank nacional', cor: '#000000', pts: 7 };
+        }
+
+        function obterHabilidadeEfetiva(jog, meuTimeElenco, adversarioElenco) {
+            let hab = jog.habilidade_id;
+            let temFullCounter = adversarioElenco.some(d => d.habilidade_id === 'za_5');
+            if (temFullCounter && hab !== 'za_5') return null;
+
+            if (hab === 'mo_4') {
+                let rivalComHab = adversarioElenco.find(j => j.habilidade_id && j.habilidade_id !== 'mo_4');
+                if (rivalComHab) return rivalComHab.habilidade_id;
+            }
+            return hab;
+        }
+
+        function determinarEfeitoJogador(jog) {
+            let efeitos = [];
+            let posNorm = normalizar(jog.posicao);
+            let eTimeA = titularesA.some(t => t.id === jog.id) ? titularesA : titularesB;
+            let eAdv = titularesA.some(t => t.id === jog.id) ? titularesB : titularesA;
+            let habEfetiva = obterHabilidadeEfetiva(jog, eTimeA, eAdv);
+
+            let temFullCounterAdversario = eAdv.some(d => d.habilidade_id === 'za_5');
+            if (temFullCounterAdversario && jog.habilidade_id !== 'za_5') efeitos.push("Neutralizado por Full Counter rival");
+            let temJogadaCoringa = [...titularesA, ...titularesB].some(j => j.habilidade_id === 'at_5');
+            if (temJogadaCoringa && jog.habilidade_id !== 'at_5') efeitos.push("Atributos zerados por Jogada Coringa");
+
+            if (temFullCounterAdversario && jog.habilidade_id !== 'za_5') {
+                return efeitos.join(' | ');
+            }
+
+            if (jog.habilidade_id === 'za_5') efeitos.push("Full Counter Ativo (Anula habilidades rivais)");
+            if (habEfetiva === 'at_1') efeitos.push("+4 Velocidade (Flash)");
+            if (habEfetiva === 'at_2') efeitos.push("+4 Precisão / Impacto 50%");
+            if (habEfetiva === 'za_1') efeitos.push("+4 Marcação (Muralha)");
+            if (habEfetiva === 'za_2') efeitos.push("Barreira Infernal (Zaga dupla)");
+            if (habEfetiva === 'za_4' && (jog.desarmesTemp || 0) > 0) efeitos.push(`+${jog.desarmesTemp} Marcação por desarmes`);
+            if (habEfetiva === 'go_2') efeitos.push("+4 Reflexo (Instinto Superior)");
+            if (habEfetiva === 'mo_3') efeitos.push("Garçom Impecável (D30 no chute aliado)");
+            if (habEfetiva === 'mo_4') efeitos.push("Clone (Copiando habilidade adversária)");
+
+            if (eTimeA.some(j => obterHabilidadeEfetiva(j, eTimeA, eAdv) === 'md_2')) efeitos.push("Defesa D22 (Desarme Coordenado)");
+            if (habEfetiva === 'go_1' && posNorm.includes('goleiro')) efeitos.push("Defesa D30 (Muro de Ferro)");
+
+            return efeitos.length > 0 ? efeitos.join(' | ') : "nenhum";
+        }
+
+        async function mostrarPainelAtributosJogador(event, jog) {
+            event.stopPropagation();
+            removerBalaoEstrela();
+
+            let rk = calcularRankJogador(jog);
+            let posNorm = normalizar(jog.posicao);
+            let atributosTexto = '';
+
+            if (posNorm.includes('goleiro')) {
+                atributosTexto = `Reflexo: ${jog.reflexo || 0}`;
+            } else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
+                atributosTexto = `Marcação: ${jog.marcacao || 0}`;
+            } else {
+                atributosTexto = `Vel: ${jog.velocidade || 0} | Prec: ${jog.precisao || 0} | Assis: ${jog.assistencia || 0}`;
+            }
+
+            let eTimeA = titularesA.some(t => t.id === jog.id) ? titularesA : titularesB;
+            let eAdv = titularesA.some(t => t.id === jog.id) ? titularesB : titularesA;
+            let habEfetiva = obterHabilidadeEfetiva(jog, eTimeA, eAdv);
+
+            let nomeHab = "";
+            if (habEfetiva) {
+                let hb = listaCompletaHabilidades.find(h => h.id === habEfetiva);
+                if (hb) nomeHab = hb.nome + (jog.habilidade_id === 'mo_4' ? ' (Clone)' : '');
+            }
+
+            let efeitoStr = determinarEfeitoJogador(jog);
+
+            let balao = document.createElement('div');
+            balao.className = 'tooltip-balao';
+            balao.id = 'balaAtivoEstrela';
+            balao.innerHTML = `
+                <div style="font-weight:bold; color:#2196f3; margin-bottom:4px; font-size:0.8rem;">#${jog.numero || '--'} ${jog.nome} (Idade: ${jog.idade || 20})</div>
+                <div style="margin-bottom:3px;">Posição: <b>${jog.posicao}</b> | <span style="color:${rk.cor}">${rk.nome}</span></div>
+                <div style="margin-bottom:3px; background:#111; padding:4px; border-radius:4px;">${atributosTexto}</div>
+                <div style="margin-bottom:3px; color:#ffeb3b;">Habilidade: <b>${nomeHab || 'Nenhuma'}</b></div>
+                <div style="color:#00ffcc;">Efeito: <b>${efeitoStr}</b></div>
+            `;
+
+            document.body.appendChild(balao);
+
+            let rect = event.target.getBoundingClientRect();
+            balao.style.top = (window.scrollY + rect.bottom + 6) + 'px';
+            balao.style.left = Math.max(10, Math.min(window.innerWidth - 240, window.scrollX + rect.left - 80)) + 'px';
+        }
+
+        async function mostrarBalaoEstrela(event, habId) {
+            event.stopPropagation();
+            removerBalaoEstrela();
+
+            let customizadas = await lerLocal("habilidades_custom");
+            let customObj = customizadas.find(c => c.id === habId);
+            
+            let nomeHab = "";
+            let descHab = "";
+
+            let baseHabObj = listaCompletaHabilidades.find(h => h.id === habId);
+            if (baseHabObj) {
+                nomeHab = baseHabObj.nome;
+            }
+
+            if (customObj && customObj.descCurta) {
+                descHab = customObj.descCurta;
+            } else {
+                descHab = fallbackHabilidadesDesc[habId] || "Habilidade especial tática ativa.";
+            }
+
+            let textoHabilidade = nomeHab ? `${nomeHab}: ${descHab}` : descHab;
+
+            let balao = document.createElement('div');
+            balao.className = 'tooltip-balao';
+            balao.id = 'balaAtivoEstrela';
+            balao.innerText = textoHabilidade;
+
+            document.body.appendChild(balao);
+
+            let rect = event.target.getBoundingClientRect();
+            balao.style.top = (window.scrollY + rect.bottom + 4) + 'px';
+            balao.style.left = (window.scrollX + rect.left - 60) + 'px';
+        }
+
+        function removerBalaoEstrela() {
+            let balaoAntigo = document.getElementById('balaAtivoEstrela');
+            if (balaoAntigo) balaoAntigo.remove();
+        }
+
+        async function carregarDadosPartidaNoCampoLocal() {
+            let partidasLocal = await lerLocal("partidas");
+            partidaDados = partidasLocal.find(p => p.id === partidaId);
+            if (!partidaDados) return;
+
+            document.getElementById('tituloFasePartida').innerText = `${partidaDados.fase} - ${partidaDados.categoria}`;
+
+            let timesLocal = await lerLocal("times");
+            timeA = timesLocal.find(x => x.id === partidaDados.time_a_id);
+            timeB = timesLocal.find(x => x.id === partidaDados.time_b_id);
+
+            document.getElementById('labelTimeA').innerText = timeA.nome;
+            document.getElementById('labelTimeB').innerText = timeB.nome;
+            atualizarPlacarUI();
+
+            let jogadoresLocal = await lerLocal("jogadores");
+            elencoA = jogadoresLocal.filter(j => j.time_id === timeA.id);
+            elencoB = jogadoresLocal.filter(j => j.time_id === timeB.id);
+
+            let ativosA = elencoA.filter(j => (j.idade || 20) < 40 && !j.aposentado);
+            let ativosB = elencoB.filter(j => (j.idade || 20) < 40 && !j.aposentado);
+
+            if (ativosA.length < 14 || ativosB.length < 14) {
+                alert(`Confronto impedido: Um dos times possui menos de 14 jogadores aptos.`);
+                window.location.href = 'simular.html';
+                return;
+            }
+
+            let adminTimeId = localStorage.getItem('futebrawl_time_admin') ? parseInt(localStorage.getItem('futebrawl_time_admin')) : null;
+
+            let escAIds = (adminTimeId && timeA.id === adminTimeId) ? JSON.parse(localStorage.getItem(`escalacao_time_${timeA.id}`) || 'null') : null;
+            let escBIds = (adminTimeId && timeB.id === adminTimeId) ? JSON.parse(localStorage.getItem(`escalacao_time_${timeB.id}`) || 'null') : null;
+
+            titularesA = escAIds ? escAIds.map(id => elencoA.find(j => j.id === id)).filter(Boolean) : escalarEquipeComReservaPorPosicao(elencoA);
+            titularesB = escBIds ? escBIds.map(id => elencoB.find(j => j.id === id)).filter(Boolean) : escalarEquipeComReservaPorPosicao(elencoB);
+
+            let idsTitularesA = new Set(titularesA.map(t => t.id));
+            let idsTitularesB = new Set(titularesB.map(t => t.id));
+
+            let alterouJogadores = false;
+            for (let jog of elencoA) {
+                if (!idsTitularesA.has(jog.id) && (jog.energia ?? 2) < 2) {
+                    jog.energia = 2;
+                    alterouJogadores = true;
+                }
+            }
+            for (let jog of elencoB) {
+                if (!idsTitularesB.has(jog.id) && (jog.energia ?? 2) < 2) {
+                    jog.energia = 2;
+                    alterouJogadores = true;
+                }
+            }
+            if (alterouJogadores) {
+                await salvarLocal("jogadores", [...elencoA, ...elencoB]);
+            }
+
+            let tipoUniformeA = timeA.id.toString() === localStorage.getItem('futebrawl_time_admin') ? (localStorage.getItem(`uniforme_escolhido_${timeA.id}`) || '1') : '1';
+            uniformeTimeA = tipoUniformeA === '2' ? (timeA.camisa2 || timeA.camisa1 || timeA.escudo) : (timeA.camisa1 || timeA.escudo);
+            
+            let tipoUniformeB = timeB.id.toString() === localStorage.getItem('futebrawl_time_admin') ? (localStorage.getItem(`uniforme_escolhido_${timeB.id}`) || '1') : '1';
+            if (timeA.camisa1 && timeB.camisa1 && timeA.camisa1 === timeB.camisa1 && tipoUniformeA === tipoUniformeB) {
+                tipoUniformeB = '2';
+            }
+            uniformeTimeB = tipoUniformeB === '2' ? (timeB.camisa2 || timeB.camisa1 || timeB.escudo) : (timeB.camisa1 || timeB.escudo);
+
+            renderizarPosicoesNoCampo();
+            atualizarLabelStatusTurno();
+            adicionarNarrativa(`Partida iniciada entre ${timeA.nome} e ${timeB.nome}. Clique para iniciar o 1º Tempo!`);
+        }
+
+        function escalarEquipeComReservaPorPosicao(elencoTime) {
+            let disponiveis = elencoTime.filter(j => (j.idade || 20) < 40 && !j.aposentado).map(j => ({ 
+                ...j, 
+                rankPts: calcularRankJogador(j).pts, 
+                energiaReal: j.energia ?? 2,
+                posNorm: normalizar(j.posicao)
+            })).sort((a,b) => b.rankPts - a.rankPts);
+
+            function pegarTitularPorPosicao(filtroFn) {
+                let cand = disponiveis.find(x => !selecionados.includes(x) && filtroFn(x) && x.energiaReal > 0);
+                if (!cand) {
+                    cand = disponiveis.find(x => !selecionados.includes(x) && filtroFn(x));
+                }
+                if (cand) selecionados.push(cand);
+            }
+
+            let selecionados = [];
+            pegarTitularPorPosicao(j => j.posNorm.includes('goleiro'));
+            pegarTitularPorPosicao(j => j.posNorm.includes('zagueiro'));
+            pegarTitularPorPosicao(j => j.posNorm.includes('zagueiro'));
+            pegarTitularPorPosicao(j => j.posNorm.includes('meia defensivo'));
+            pegarTitularPorPosicao(j => j.posNorm.includes('meia ofensivo') || (j.posNorm.includes('meia') && !j.posNorm.includes('defensivo')));
+            pegarTitularPorPosicao(j => j.posNorm.includes('atacante'));
+            pegarTitularPorPosicao(j => j.posNorm.includes('atacante'));
+
+            while(selecionados.length < 7 && disponiveis.length > selecionados.length) {
+                let p = disponiveis.find(x => !selecionados.includes(x) && x.energiaReal > 0) || disponiveis.find(x => !selecionados.includes(x));
+                if(p) selecionados.push(p);
+                else break;
+            }
+
+            return selecionados.slice(0, 7);
+        }
+
+        function atualizarPlacarUI() {
+            document.getElementById('placarGols').innerText = `${gameState.golsA} X ${gameState.golsB}`;
+            let containerPen = document.getElementById('placarPenaltisSecundario');
+            if (gameState.emPenaltis) {
+                let maxTiros = Math.max(5, gameState.penaltisState.tirosA.length, gameState.penaltisState.tirosB.length);
+                let htmlA = '', htmlB = '';
+
+                for (let i = 0; i < maxTiros; i++) {
+                    let resA = gameState.penaltisState.tirosA[i];
+                    let simboloA = '⚪';
+                    if (resA === true) simboloA = '🟢';
+                    else if (resA === false) simboloA = '🔴';
+                    htmlA += `<span>${simboloA}</span>`;
+
+                    let resB = gameState.penaltisState.tirosB[i];
+                    let simboloB = '⚪';
+                    if (resB === true) simboloB = '🟢';
+                    else if (resB === false) simboloB = '🔴';
+                    htmlB += `<span>${simboloB}</span>`;
+                }
+
+                containerPen.innerHTML = `
+                    <div style="font-size:0.75rem; color:#aaa; margin-bottom:2px;">Disputa de Pênaltis</div>
+                    <div style="display:flex; gap:15px;">
+                        <div>${timeA.nome}: <div class="bloco-penaltis-time">${htmlA}</div></div>
+                        <div>${timeB.nome}: <div class="bloco-penaltis-time">${htmlB}</div></div>
+                    </div>
+                `;
+                containerPen.style.display = 'flex';
+            } else {
+                containerPen.style.display = 'none';
+            }
+        }
+
+        function atualizarLabelStatusTurno() {
+            if (gameState.tempo === 4 && !gameState.emPenaltis) {
+                document.getElementById('statusTurnoLabel').innerText = `Partida Encerrada`;
+                return;
+            }
+            if (gameState.emPenaltis) {
+                document.getElementById('statusTurnoLabel').innerText = `Disputa de Pênaltis 🎯`;
+                return;
+            }
+            if (gameState.pausadoIntervalo) {
+                document.getElementById('statusTurnoLabel').innerText = gameState.emProrrogacao ? `Intervalo da Prorrogação` : `Intervalo de Jogo`;
+                return;
+            }
+            let nomeTempo = gameState.tempo === 1 ? '1º Tempo' : (gameState.tempo === 2 ? 'Prorrogação (1º T)' : (gameState.tempo === 3 ? '2º Tempo' : 'Prorrogação (2º T)'));
+            let numAtaque = Math.floor(gameState.indiceSequencia / 2) + 1;
+            let maxAtaques = gameState.emProrrogacao ? 2 : 5;
+            if (numAtaque > maxAtaques) numAtaque = maxAtaques;
+            let timeAtqNome = gameState.timeComAtaque === 'A' ? timeA.nome : timeB.nome;
+            document.getElementById('statusTurnoLabel').innerText = `${nomeTempo} - ${numAtaque}º ataque do ${timeAtqNome}`;
+        }
+
+        function adicionarNarrativa(txt) {
+            let box = document.getElementById('narrativaBox');
+            box.innerHTML += `<div>> ${txt}</div>`;
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function renderizarPosicoesNoCampo() {
+            removerBalaoEstrela();
+            let campo = document.getElementById('campoVisual');
+            campo.innerHTML = `<div class="bola-centro" id="bolaElemento" style="top:50%; left:50%;">⚽</div>`;
+
+            if (gameState.emPenaltis) {
+                renderizarLayoutPenaltisEstatico(campo);
+                return;
+            }
+
+            let coordsA = JSON.parse(JSON.stringify(baseCoordsA));
+            let coordsB = JSON.parse(JSON.stringify(baseCoordsB));
+
+            if (gameState.faseBarreira !== 'inicio' && gameState.duplaAtacante.length === 2) {
+                let yAlvo = 50; 
+                if (gameState.timeComAtaque === 'A') {
+                    if (gameState.etapaAvanco === 1) yAlvo = 43; 
+                    else if (gameState.etapaAvanco === 2) yAlvo = 32; 
+                    else if (gameState.etapaAvanco === 3) yAlvo = 20; 
+                    else if (gameState.etapaAvanco >= 4) yAlvo = 8;  
+                } else {
+                    if (gameState.etapaAvanco === 1) yAlvo = 57; 
+                    else if (gameState.etapaAvanco === 2) yAlvo = 69; 
+                    else if (gameState.etapaAvanco === 3) yAlvo = 81; 
+                    else if (gameState.etapaAvanco >= 4) yAlvo = 92; 
+                }
+
+                let at1 = gameState.duplaAtacante[0];
+                let at2 = gameState.duplaAtacante[1];
+                let timeAtacanteElenco = gameState.timeComAtaque === 'A' ? titularesA : titularesB;
+                let targetCoords = gameState.timeComAtaque === 'A' ? coordsA : coordsB;
+
+                let idx1 = timeAtacanteElenco.findIndex(j => j.id === at1.id);
+                let idx2 = timeAtacanteElenco.findIndex(j => j.id === at2.id);
+
+                if (idx1 !== -1) { targetCoords[idx1].y = yAlvo; targetCoords[idx1].x = 38; }
+                if (idx2 !== -1) { targetCoords[idx2].y = yAlvo; targetCoords[idx2].x = 62; }
+            }
+
+            titularesA.forEach((jog, index) => {
+                let pos = coordsA[index];
+                let sigla = obterSiglaPosicao(jog.posicao);
+                let num = jog.numero || (index + 1);
+                let nome = (jog.nome || '').split(' ')[0];
+                let rk = calcularRankJogador(jog);
+                let estrelaHtml = jog.habilidade_id ? ` <span class="estrela-habilidade" title="Ver Habilidade" onclick="mostrarBalaoEstrela(event, '${jog.habilidade_id}')">⭐</span>` : '';
+
+                let div = document.createElement('div');
+                div.className = 'jogador-camisa';
+                div.style.left = `${pos.x}%`; div.style.top = `${pos.y}%`;
+                div.innerHTML = `<img src="${uniformeTimeA}" class="img-camisa-clube"><small style="background:${rk.cor}">${num} ${sigla}-${nome}${estrelaHtml}</small>`;
+                div.onclick = (e) => mostrarPainelAtributosJogador(e, jog);
+                campo.appendChild(div);
+            });
+
+            titularesB.forEach((jog, index) => {
+                let pos = coordsB[index];
+                let sigla = obterSiglaPosicao(jog.posicao);
+                let num = jog.numero || (index + 1);
+                let nome = (jog.nome || '').split(' ')[0];
+                let rk = calcularRankJogador(jog);
+                let estrelaHtml = jog.habilidade_id ? ` <span class="estrela-habilidade" title="Ver Habilidade" onclick="mostrarBalaoEstrela(event, '${jog.habilidade_id}')">⭐</span>` : '';
+
+                let div = document.createElement('div');
+                div.className = 'jogador-camisa';
+                div.style.left = `${pos.x}%`; div.style.top = `${pos.y}%`;
+                div.innerHTML = `<img src="${uniformeTimeB}" class="img-camisa-clube"><small style="background:${rk.cor}">${num} ${sigla}-${nome}${estrelaHtml}</small>`;
+                div.onclick = (e) => mostrarPainelAtributosJogador(e, jog);
+                campo.appendChild(div);
+            });
+
+            let bola = document.getElementById('bolaElemento');
+            if (gameState.faseBarreira === 'inicio') {
+                bola.style.top = '50%'; bola.style.left = '50%';
+            } else {
+                let yBola = 50;
+                if (gameState.timeComAtaque === 'A') {
+                    if (gameState.etapaAvanco === 1) yBola = 43;
+                    else if (gameState.etapaAvanco === 2) yBola = 32;
+                    else if (gameState.etapaAvanco === 3) yBola = 20;
+                    else if (gameState.etapaAvanco >= 4) yBola = 8;
+                    else yBola = 57;
+                } else {
+                    if (gameState.etapaAvanco === 1) yBola = 57;
+                    else if (gameState.etapaAvanco === 2) yBola = 69;
+                    else if (gameState.etapaAvanco === 3) yBola = 81;
+                    else if (gameState.etapaAvanco >= 4) yBola = 92;
+                    else yBola = 43;
+                }
+                bola.style.top = `${yBola}%`; bola.style.left = '50%';
+            }
+        }
+
+        function renderizarLayoutPenaltisEstatico(campo) {
+            let p = gameState.penaltisState;
+            let cobrandoTimeA = p.vezA;
+            let elencoCobrador = cobrandoTimeA ? titularesA : titularesB;
+            let elencoGoleiro = cobrandoTimeA ? titularesB : titularesA;
+            let uniformeVez = cobrandoTimeA ? uniformeTimeA : uniformeTimeB;
+            let uniformeGoleiro = cobrandoTimeA ? uniformeTimeB : uniformeTimeA;
+
+            let batedorAtual = elencoCobrador[p.cobrancaIndex % elencoCobrador.length] || elencoCobrador[0];
+            let goleiroAtual = elencoGoleiro[0];
+
+            let divGol = document.createElement('div');
+            divGol.className = 'jogador-camisa';
+            divGol.style.left = '50%'; divGol.style.top = '12%';
+            let rkG = calcularRankJogador(goleiroAtual);
+            divGol.innerHTML = `<img src="${uniformeGoleiro}" class="img-camisa-clube"><small style="background:${rkG.cor}">GO-${goleiroAtual.nome.split(' ')[0]}</small>`;
+            divGol.onclick = (e) => mostrarPainelAtributosJogador(e, goleiroAtual);
+            campo.appendChild(divGol);
+
+            let divCob = document.createElement('div');
+            divCob.className = 'jogador-camisa';
+            divCob.style.left = '50%'; divCob.style.top = '35%';
+            let rkB = calcularRankJogador(batedorAtual);
+            divCob.innerHTML = `<img src="${uniformeVez}" class="img-camisa-clube"><small style="background:${rkB.cor}">${batedorAtual.posicao.substring(0,2).toUpperCase()}-${batedorAtual.nome.split(' ')[0]}</small>`;
+            divCob.onclick = (e) => mostrarPainelAtributosJogador(e, batedorAtual);
+            campo.appendChild(divCob);
+
+            let bola = document.getElementById('bolaElemento');
+            bola.style.top = '32%'; bola.style.left = '50%';
+        }
+
+        function sortearDuplaAtacante(elenco) {
+            let atacantes = elenco.filter(j => normalizar(j.posicao).includes('atacante'));
+            let moObj = elenco.find(j => normalizar(j.posicao).includes('meia ofensivo') || (normalizar(j.posicao).includes('meia') && !normalizar(j.posicao).includes('defensivo')));
+            
+            function escolherAtletaPonderado() {
+                let rand = Math.random() * 100;
+                if (rand < 35 && atacantes.length > 0) return atacantes[0];
+                if (rand < 70 && atacantes.length > 1) return atacantes[1] || atacantes[0];
+                if (rand < 100 && moObj) return moObj;
+                return atacantes[0] || elenco[0];
+            }
+
+            let p1 = escolherAtletaPonderado();
+            let p2 = escolherAtletaPonderado();
+            while(p1.id === p2.id && elenco.length > 1) {
+                p2 = escolherAtletaPonderado();
+            }
+            return [p1, p2];
+        }
+
+        function executarProximoPassoTurno() {
+            if (gameState.tempo === 4 && !gameState.emProrrogacao) return;
+
+            if (gameState.emPenaltis) {
+                executarPassoPenaltis();
+                return;
+            }
+
+            if (gameState.pausadoIntervalo) {
+                gameState.pausadoIntervalo = false;
+                if (gameState.emProrrogacao && gameState.tempo === 2) {
+                    gameState.tempo = 4;
+                } else if (!gameState.emProrrogacao && gameState.tempo === 1) {
+                    gameState.tempo = 3;
+                }
+                gameState.indiceSequencia = 0;
+                gameState.timeComAtaque = (gameState.tempo === 4) ? sequenciaProrrogacao2[0] : sequenciaSegundoTempo[0];
+                prepararNovoTurnoAtaque();
+                return;
+            }
+
+            if (gameState.faseBarreira === 'inicio') {
+                let seqAtual = gameState.tempo === 1 ? sequenciaPrimeiroTempo : (gameState.tempo === 2 ? sequenciaProrrogacao1 : (gameState.tempo === 3 ? sequenciaSegundoTempo : sequenciaProrrogacao2));
+                
+                if (gameState.indiceSequencia >= seqAtual.length) {
+                    if (gameState.tempo === 1) {
+                        gameState.pausadoIntervalo = true;
+                        renderizarPosicoesNoCampo();
+                        atualizarLabelStatusTurno();
+                        document.getElementById('caixaSorteioUI').style.display = 'flex';
+                        document.getElementById('textoComparativoSorteio').innerHTML = `Intervalo de Jogo`;
+                        document.getElementById('btnAcaoTurno').innerText = 'Iniciar 2º Tempo ⚽';
+                        adicionarNarrativa(`Fim do 1º Tempo!`);
+                        return;
+                    } else if (gameState.tempo === 3) {
+                        if (gameState.golsA === gameState.golsB && partidaDados.fase === 'Mundial') {
+                            gameState.emProrrogacao = true;
+                            gameState.tempo = 2;
+                            gameState.indiceSequencia = 0;
+                            gameState.timeComAtaque = sequenciaProrrogacao1[0];
+                            document.getElementById('caixaSorteioUI').style.display = 'flex';
+                            document.getElementById('textoComparativoSorteio').innerHTML = `Empate no Mundial - Prorrogação`;
+                            document.getElementById('btnAcaoTurno').innerText = 'Iniciar Prorrogação ⏱️';
+                            adicionarNarrativa(`Fim do Tempo Regulamentar! Empate. Vamos para a Prorrogação!`);
+                            return;
+                        } else {
+                            encerrarPartidaESalvarLocal();
+                            return;
+                        }
+                    } else if (gameState.tempo === 2) {
+                        gameState.pausadoIntervalo = true;
+                        renderizarPosicoesNoCampo();
+                        atualizarLabelStatusTurno();
+                        document.getElementById('caixaSorteioUI').style.display = 'flex';
+                        document.getElementById('textoComparativoSorteio').innerHTML = `Intervalo da Prorrogação`;
+                        document.getElementById('btnAcaoTurno').innerText = 'Iniciar 2º Tempo Prorrogação ⚽';
+                        adicionarNarrativa(`Fim do 1º Tempo da Prorrogação!`);
+                        return;
+                    } else if (gameState.tempo === 4 && gameState.emProrrogacao) {
+                        if (gameState.golsA === gameState.golsB && partidaDados.fase === 'Mundial') {
+                            document.getElementById('caixaSorteioUI').style.display = 'flex';
+                            document.getElementById('textoComparativoSorteio').innerHTML = `Fim da Prorrogação - Empate`;
+                            document.getElementById('btnAcaoTurno').innerText = 'Ir para Penalidades 🎯';
+                            document.getElementById('btnAcaoTurno').onclick = () => {
+                                document.getElementById('btnAcaoTurno').onclick = executarProximoPassoTurno;
+                                iniciarDisputaPenaltis();
+                            };
+                            adicionarNarrativa(`Fim da Prorrogação! Persiste o empate. Clique para ir às Penalidades!`);
+                            return;
+                        } else {
+                            encerrarPartidaESalvarLocal();
+                            return;
+                        }
+                    }
+                }
+                gameState.timeComAtaque = seqAtual[gameState.indiceSequencia];
+                prepararNovoTurnoAtaque();
+                return;
+            }
+
+            if (gameState.faseBarreira === 'defesa_1') {
+                resolverBarreiraDefesa1();
+            } else if (gameState.faseBarreira === 'meio_campo') {
+                resolverBarreiraMeioCampo();
+            } else if (gameState.faseBarreira === 'zaga') {
+                resolverBarreiraZaga();
+            } else if (gameState.faseBarreira === 'goleiro') {
+                resolverBarreiraGoleiro();
+            }
+        }
+
+        function prepararNovoTurnoAtaque() {
+            let atacanteElenco = gameState.timeComAtaque === 'A' ? titularesA : titularesB;
+            let defensorElenco = gameState.timeComAtaque === 'A' ? titularesB : titularesA;
+
+            gameState.duplaAtacante = sortearDuplaAtacante(atacanteElenco);
+            gameState.barreiraAtualJogadores = defensorElenco.filter((j, idx) => idx === 5 || idx === 6);
+            gameState.goleiroAdversario = defensorElenco[0];
+
+            gameState.etapaAvanco = 0;
+            gameState.faseBarreira = 'defesa_1';
+            gameState.tentativaBarreiraInfernalDupla = false;
+
+            renderizarPosicoesNoCampo();
+            atualizarLabelStatusTurno();
+            
+            let nomeAtqTime = gameState.timeComAtaque === 'A' ? timeA.nome : timeB.nome;
+            let nomeDefTime = gameState.timeComAtaque === 'A' ? timeB.nome : timeA.nome;
+            
+            let atqResTemp = gerarFormatacaoAtaque(gameState.duplaAtacante, 'defesa_1');
+            let defResTemp = gerarFormatacaoDefesa(gameState.barreiraAtualJogadores, 'defesa_1');
+            atualizarCaixaComparativoUI(atqResTemp.total, defResTemp.total, nomeAtqTime, nomeDefTime);
+
+            document.getElementById('btnAcaoTurno').innerText = 'Passar 1ª Barreira (Atacantes Rivais) ⚔️';
+            adicionarNarrativa(`Ataque ${nomeAtqTime} [${gameState.duplaAtacante[0].nome}/${gameState.duplaAtacante[1].nome}] (Atq: ${atqResTemp.total})`);
+        }
+
+        function gerarFormatacaoAtaque(dupla, faseAtual) {
+            let at1 = dupla[0];
+            let at2 = dupla[1];
+            let adversarioElenco = gameState.timeComAtaque === 'A' ? titularesB : titularesA;
+            let equipeAtacanteElenco = gameState.timeComAtaque === 'A' ? titularesA : titularesB;
+            let temFullCounter = adversarioElenco.some(d => d.habilidade_id === 'za_5');
+            let temJogadaCoringa = [...titularesA, ...titularesB].some(j => j.habilidade_id === 'at_5');
+
+            let hab1 = obterHabilidadeEfetiva(at1, equipeAtacanteElenco, adversarioElenco);
+            let hab2 = obterHabilidadeEfetiva(at2, equipeAtacanteElenco, adversarioElenco);
+
+            let bonusVel1 = (hab1 === 'at_1' && !temJogadaCoringa) ? 4 : 0;
+            let bonusVel2 = (hab2 === 'at_1' && !temJogadaCoringa) ? 4 : 0;
+            let vel1 = temJogadaCoringa ? 0 : ((at1.velocidade || 0) + bonusVel1);
+            let vel2 = temJogadaCoringa ? 0 : ((at2.velocidade || 0) + bonusVel2);
+
+            let d1 = Math.floor(Math.random() * 20) + 1;
+            let d2 = Math.floor(Math.random() * 20) + 1;
+
+            let sub1 = d1 + vel1;
+            let sub2 = d2 + vel2;
+
+            let fixo1 = 0;
+            let fixo2 = 0;
+            if (faseAtual === 'goleiro' && !temJogadaCoringa) {
+                let p1Norm = normalizar(at1.posicao);
+                let p2Norm = normalizar(at2.posicao);
+                if (p1Norm.includes('atacante') || p1Norm.includes('meia')) fixo1 = (at1.assistencia || 3);
+                if (p2Norm.includes('atacante') || p2Norm.includes('meia')) fixo2 = (at2.assistencia || 3);
+            }
+
+            let total = sub1 + fixo1 + sub2 + fixo2;
+
+            let parte1 = `(D20(${d1})+${vel1}=${sub1})`;
+            if (fixo1 > 0) parte1 += `+${fixo1}`;
+            let parte2 = `(D20(${d2})+${vel2}=${sub2})`;
+            if (fixo2 > 0) parte2 += `+${fixo2}`;
+
+            let linha = `${parte1} + ${parte2}`;
+            return { total, linha };
+        }
+
+        function gerarFormatacaoDefesa(barreira, faseAtual) {
+            let def1 = barreira[0];
+            let def2 = barreira[1] || barreira[0];
+
+            let adversarioElenco = gameState.timeComAtaque === 'A' ? titularesA : titularesB;
+            let timeDefensorElenco = gameState.timeComAtaque === 'A' ? titularesB : titularesA;
+            let temFullCounter = adversarioElenco.some(d => d.habilidade_id === 'za_5');
+            let temJogadaCoringa = [...titularesA, ...titularesB].some(j => j.habilidade_id === 'at_5');
+
+            let hab1 = obterHabilidadeEfetiva(def1, timeDefensorElenco, adversarioElenco);
+            let hab2 = obterHabilidadeEfetiva(def2, timeDefensorElenco, adversarioElenco);
+
+            let bonusMarc1 = (hab1 === 'za_1' && !temJogadaCoringa) ? 4 : 0;
+            let bonusMarc2 = (hab2 === 'za_1' && !temJogadaCoringa) ? 4 : 0;
+            let marc1 = temJogadaCoringa ? 0 : ((def1.marcacao || 0) + bonusMarc1);
+            let marc2 = temJogadaCoringa ? 0 : ((def2.marcacao || 0) + bonusMarc2);
+
+            let posNorm1 = normalizar(def1.posicao);
+            let posNorm2 = normalizar(def2.posicao);
+
+            let teto1 = posNorm1.includes('meia') ? 15 : 20;
+            let teto2 = posNorm2.includes('meia') ? 15 : 20;
+
+            if (faseAtual === 'defesa_1') {
+                teto1 = 10;
+                teto2 = 10;
+            }
+
+            let temDesarmeCoordenado = timeDefensorElenco.some(j => obterHabilidadeEfetiva(j, timeDefensorElenco, adversarioElenco) === 'md_2');
+            let temDobra1 = (hab1 === 'md_5' && (posNorm1.includes('meia') || posNorm1.includes('defensiv')));
+            let temDobra2 = (hab2 === 'md_5' && (posNorm2.includes('meia') || posNorm2.includes('defensiv')));
+
+            if (temDobra1) teto1 = 30;
+            if (temDobra2) teto2 = 30;
+            if (temDesarmeCoordenado) {
+                if (teto1 < 22) teto1 = 22;
+                if (teto2 < 22) teto2 = 22;
+            }
+
+            let d1 = Math.floor(Math.random() * teto1) + 1;
+            let d2 = Math.floor(Math.random() * teto2) + 1;
+
+            let sub1 = d1 + marc1;
+            let sub2 = d2 + marc2;
+            let total = sub1 + sub2;
+
+            let parte1 = `(D${teto1}(${d1})+${marc1}=${sub1})`;
+            let parte2 = `(D${teto2}(${d2})+${marc2}=${sub2})`;
+            let linha = `${parte1} + ${parte2}`;
+
+            return { total, linha };
+        }
+
+        function atualizarCaixaComparativoUI(valAtq, valDef, nomeAtq, nomeDef) {
+            let box = document.getElementById('caixaSorteioUI');
+            box.style.display = 'flex';
+            document.getElementById('textoComparativoSorteio').innerHTML = `Atq ${nomeAtq} <b style="color:#ffeb3b">${valAtq}</b> x <b style="color:#ffeb3b">${valDef}</b> Def ${nomeDef}`;
+        }
+
+        function registrarNarrativaBloco(faseNome, atqRes, defRes) {
+            let bloco = `Atq = ${atqRes.total}<br>` +
+                        `${atqRes.linha}<br>` +
+                        `Def = ${defRes.total}<br>` +
+                        `${defRes.linha}<br>` +
+                        `Atq ${atqRes.total} x ${defRes.total} Def (${faseNome})`;
+            adicionarNarrativa(bloco);
+        }
+
+        function resolverBarreiraDefesa1() {
+            let defensoresAtuais = gameState.barreiraAtualJogadores;
+            let adversarioElenco = gameState.timeComAtaque === 'A' ? titularesB : titularesA;
+
+            let atqComImpacto = gameState.duplaAtacante.find(a => obterHabilidadeEfetiva(a, gameState.timeComAtaque === 'A' ? titularesA : titularesB, adversarioElenco) === 'at_2');
+            if (atqComImpacto && Math.random() < 0.50) {
+                adicionarNarrativa(`⚡ Habilidade Impacto ativada! ${atqComImpacto.nome} decidiu chutar direto antes de passar pela zaga!`);
+                gameState.etapaAvanco = 3;
+                renderizarPosicoesNoCampo();
+                gameState.faseBarreira = 'goleiro';
+                document.getElementById('btnAcaoTurno').innerText = 'Chutar contra o Goleiro ⚽';
+                return;
+            }
+
+            let atqRes = gerarFormatacaoAtaque(gameState.duplaAtacante, 'defesa_1');
+            let defRes = gerarFormatacaoDefesa(defensoresAtuais, 'defesa_1');
+            
+            atualizarCaixaComparativoUI(atqRes.total, defRes.total, gameState.timeComAtaque === 'A' ? timeA.nome : timeB.nome, gameState.timeComAtaque === 'A' ? timeB.nome : timeA.nome);
+            registrarNarrativaBloco('1ª Barreira', atqRes, defRes);
+
+            if (atqRes.total > defRes.total) {
+                gameState.etapaAvanco = 1; 
+                let defensorElenco = gameState.timeComAtaque === 'A' ? titularesB : titularesA;
+                gameState.barreiraAtualJogadores = defensorElenco.filter((j, idx) => idx === 3 || idx === 4);
+                renderizarPosicoesNoCampo();
+                gameState.faseBarreira = 'meio_campo';
+                document.getElementById('btnAcaoTurno').innerText = 'Enfrentar Meio-Campo Adversário ⚔️';
+            } else {
+                contabilizarDesarmeBarreira(defensoresAtuais);
+                finalizarTurnoAtaque();
+            }
+        }
+
+        function resolverBarreiraMeioCampo() {
+            let defensoresAtuais = gameState.barreiraAtualJogadores;
+            let atqRes = gerarFormatacaoAtaque(gameState.duplaAtacante, 'meio_campo');
+            let defRes = gerarFormatacaoDefesa(defensoresAtuais, 'meio_campo');
+            
+            atualizarCaixaComparativoUI(atqRes.total, defRes.total, gameState.timeComAtaque === 'A' ? timeA.nome : timeB.nome, gameState.timeComAtaque === 'A' ? timeB.nome : timeA.nome);
+            registrarNarrativaBloco('Meio-Campo', atqRes, defRes);
+
+            if (atqRes.total > defRes.total) {
+                gameState.etapaAvanco = 2; 
+                let defensorElenco = gameState.timeComAtaque === 'A' ? titularesB : titularesA;
+                gameState.barreiraAtualJogadores = defensorElenco.filter((j, idx) => idx === 1 || idx === 2);
+                renderizarPosicoesNoCampo();
+                gameState.faseBarreira = 'zaga';
+                document.getElementById('btnAcaoTurno').innerText = 'Enfrentar Zaga Final ⚔️';
+            } else {
+                contabilizarDesarmeBarreira(defensoresAtuais);
+                finalizarTurnoAtaque();
+            }
+        }
+
+        function resolverBarreiraZaga() {
+            let defensoresAtuais = gameState.barreiraAtualJogadores;
+            let atqRes = gerarFormatacaoAtaque(gameState.duplaAtacante, 'zaga');
+            let defRes = gerarFormatacaoDefesa(defensoresAtuais, 'zaga');
+            
+            let adversarioElenco = gameState.timeComAtaque === 'A' ? titularesB : titularesA;
+            let temFullCounter = adversarioElenco.some(d => d.habilidade_id === 'za_5');
+
+            atualizarCaixaComparativoUI(atqRes.total, defRes.total, gameState.timeComAtaque === 'A' ? timeA.nome : timeB.nome, gameState.timeComAtaque === 'A' ? timeB.nome : timeA.nome);
+
+            if (defensoresAtuais.some(d => obterHabilidadeEfetiva(d, adversarioElenco, adversarioElenco) === 'za_2' && !temFullCounter)) {
+                if (!gameState.tentativaBarreiraInfernalDupla) {
+                    if (atqRes.total <= defRes.total) {
+                        registrarNarrativaBloco('Barreira Infernal (1ª T)', atqRes, defRes);
+                        contabilizarDesarmeBarreira(defensoresAtuais);
+                        finalizarTurnoAtaque();
+                        return;
+                    } else {
+                        gameState.tentativaBarreiraInfernalDupla = true;
+                        registrarNarrativaBloco('Barreira Infernal (Superada 1ª)', atqRes, defRes);
+                        document.getElementById('btnAcaoTurno').innerText = 'Enfrentar Zaga Final (2ª Tentativa) ⚔️';
+                        return;
+                    }
+                } else {
+                    if (atqRes.total <= defRes.total) {
+                        registrarNarrativaBloco('Barreira Infernal (2ª T)', atqRes, defRes);
+                        contabilizarDesarmeBarreira(defensoresAtuais);
+                        finalizarTurnoAtaque();
+                        return;
+                    }
+                }
+            }
+
+            registrarNarrativaBloco('Zaga Final', atqRes, defRes);
+
+            if (atqRes.total > defRes.total) {
+                gameState.etapaAvanco = 3; 
+                renderizarPosicoesNoCampo();
+                gameState.faseBarreira = 'goleiro';
+                document.getElementById('btnAcaoTurno').innerText = 'Chutar contra o Goleiro ⚽';
+            } else {
+                contabilizarDesarmeBarreira(defensoresAtuais);
+                finalizarTurnoAtaque();
+            }
+        }
+
+        // CORREÇÃO DO CÁLCULO DE CHUTE PARA SOMAR A ASSISTÊNCIA DO COLEGA E EXIBIR NO PAINEL
+        function gerarFormatacaoGoleiro() {
+            let d = gameState.duplaAtacante;
+            let artilheiro = d[Math.floor(Math.random() * d.length)];
+            let assistente = d.find(x => x.id !== artilheiro.id) || d[0];
+
+            let adversarioElenco = gameState.timeComAtaque === 'A' ? titularesB : titularesA;
+            let timeDefensorElenco = gameState.timeComAtaque === 'A' ? titularesB : titularesA;
+            let equipeAtacanteElenco = gameState.timeComAtaque === 'A' ? titularesA : titularesB;
+            let temFullCounter = adversarioElenco.some(d => d.habilidade_id === 'za_5');
+            let temJogadaCoringa = [...titularesA, ...titularesB].some(j => j.habilidade_id === 'at_5');
+
+            let habArt = obterHabilidadeEfetiva(artilheiro, equipeAtacanteElenco, adversarioElenco);
+            let habAssis = obterHabilidadeEfetiva(assistente, equipeAtacanteElenco, adversarioElenco);
+            let gol = gameState.goleiroAdversario;
+            let habGol = obterHabilidadeEfetiva(gol, timeDefensorElenco, equipeAtacanteElenco);
+
+            let tetoChute = (habAssis === 'mo_3' && !temFullCounter && !temJogadaCoringa) ? 30 : 20;
+            let dChute = Math.floor(Math.random() * tetoChute) + 1;
+            let bonusPrec = (habArt === 'at_2' && !temJogadaCoringa) ? 4 : 0;
+            let precisaoArtilheiro = temJogadaCoringa ? 0 : ((artilheiro.precisao || 0) + bonusPrec);
+            let assistenciaAliado = temJogadaCoringa ? 0 : (assistente.assistencia || 0);
+
+            let subChute = dChute + precisaoArtilheiro;
+            let totalChuteFinal = subChute + assistenciaAliado;
+
+            let tetoDefesa = (habGol === 'go_1' && !temJogadaCoringa) ? 30 : 20;
+            let bonusReflexo = (habGol === 'go_2' && !temJogadaCoringa) ? 4 : 0;
+            let reflexoTotal = temJogadaCoringa ? 0 : ((gol.reflexo || 0) + bonusReflexo);
+            let defesaGoleiroRolada = Math.floor(Math.random() * tetoDefesa) + 1;
+            if (habArt === 'at_3') reflexoTotal = 0;
+            if (habGol === 'go_3') totalChuteFinal -= precisaoTotal;
+
+            let totalGolDef = defesaGoleiroRolada + reflexoTotal;
+
+            if (habGol === 'go_4') {
+                totalChuteFinal = Math.floor(totalChuteFinal / 2);
+            }
+
+            let linhaChute = `(D${tetoChute}(${dChute})+${precisaoArtilheiro}) + ${assistenciaAliado}(assis) = ${totalChuteFinal}`;
+            let linhaDef = `(D${tetoDefesa}(${defesaGoleiroRolada})+${reflexoTotal}) = ${totalGolDef}`;
+
+            return {
+                artilheiro,
+                assistente,
+                gol,
+                totalChute: totalChuteFinal,
+                totalGolDef,
+                linhaChute,
+                linhaDef
+            };
+        }
+
+        function resolverBarreiraGoleiro() {
+            gameState.etapaAvanco = 4; 
+            renderizarPosicoesNoCampo();
+
+            let resGol = gerarFormatacaoGoleiro();
+            let { artilheiro, assistente, gol, totalChute, totalGolDef, linhaChute, linhaDef } = resGol;
+
+            let nomeAtqTime = gameState.timeComAtaque === 'A' ? timeA.nome : timeB.nome;
+            let timeDefensorElenco = gameState.timeComAtaque === 'A' ? titularesB : titularesA;
+            atualizarCaixaComparativoUI(totalChute, totalGolDef, nomeAtqTime, timeDefensorElenco[0].nome + " (Goleiro)");
+
+            let textoGoleiroBloco = `Contra o goleiro<br>` +
+                                   `Chute: ${totalChute}<br>` +
+                                   `${linhaChute}<br>` +
+                                   `Defesa ${totalGolDef}<br>` +
+                                   `${linhaDef}<br>` +
+                                   `Chute ${totalChute} x ${totalGolDef} defesa`;
+            adicionarNarrativa(textoGoleiroBloco);
+
+            if (totalChute > totalGolDef) {
+                if (gameState.timeComAtaque === 'A') gameState.golsA++;
+                else gameState.golsB++;
+                atualizarPlacarUI();
+                artilheiro.gols = (artilheiro.gols || 0) + 1;
+                assistente.assistencia_gols = (assistente.assistencia_gols || 0) + 1;
+
+                adicionarNarrativa(`⚽ GOOOOL de ${artilheiro.nome}! Finalização indefensável.`);
+            } else {
+                gol.defesas = (gol.defesas || 0) + 1;
+                adicionarNarrativa(`🥅 Defesa espetacular do goleiro ${gol.nome}! Chute defendido.`);
+            }
+            
+            finalizarTurnoAtaque();
+        }
+
+        function contabilizarDesarmeBarreira(jogadoresBarreira) {
+            if (!jogadoresBarreira || jogadoresBarreira.length === 0) return;
+            let escolhido = jogadoresBarreira[Math.floor(Math.random() * jogadoresBarreira.length)];
+            escolhido.desarmes = (escolhido.desarmes || 0) + 1;
+            adicionarNarrativa(`🛑 Desarme limpo de ${escolhido.nome}.`);
+
+            let parceiro = jogadoresBarreira.find(j => j.id !== escolhido.id);
+            if (parceiro) {
+                parceiro.assistencia_def = (parceiro.assistencia_def || 0) + 1;
+            }
+
+            let adversarioElenco = gameState.timeComAtaque === 'A' ? titularesB : titularesA;
+            let temFullCounter = adversarioElenco.some(d => d.habilidade_id === 'za_5');
+
+            if (escolhido.habilidade_id === 'za_4' && !temFullCounter) {
+                escolhido.marcacao = (escolhido.marcacao || 0) + 1;
+            }
+        }
+
+        function finalizarTurnoAtaque() {
+            gameState.faseBarreira = 'inicio';
+            gameState.duplaAtacante = []; 
+            gameState.tentativaBarreiraInfernalDupla = false;
+            gameState.indiceSequencia++;
+
+            let limiteSeq = gameState.emProrrogacao ? 4 : 10;
+
+            if (gameState.tempo === 1 && gameState.indiceSequencia >= limiteSeq) {
+                gameState.pausadoIntervalo = true;
+                renderizarPosicoesNoCampo();
+                atualizarLabelStatusTurno();
+                document.getElementById('caixaSorteioUI').style.display = 'flex';
+                document.getElementById('textoComparativoSorteio').innerHTML = `Intervalo de Jogo`;
+                document.getElementById('btnAcaoTurno').innerText = 'Iniciar 2º Tempo ⚽';
+                adicionarNarrativa(`Fim do 1º Tempo!`);
+                return;
+            }
+
+            if (gameState.tempo === 2 && gameState.indiceSequencia >= 4) {
+                gameState.pausadoIntervalo = true;
+                renderizarPosicoesNoCampo();
+                atualizarLabelStatusTurno();
+                document.getElementById('caixaSorteioUI').style.display = 'flex';
+                document.getElementById('textoComparativoSorteio').innerHTML = `Intervalo da Prorrogação`;
+                document.getElementById('btnAcaoTurno').innerText = 'Iniciar 2º Tempo Prorrogação ⚽';
+                adicionarNarrativa(`Fim do 1º Tempo da Prorrogação!`);
+                return;
+            }
+
+            let limiteTempo3 = gameState.emProrrogacao ? 4 : 10;
+            if ((gameState.tempo === 3 || gameState.tempo === 4) && gameState.indiceSequencia >= limiteTempo3) {
+                if (gameState.tempo === 3 && gameState.golsA === gameState.golsB && partidaDados.fase === 'Mundial') {
+                    gameState.emProrrogacao = true;
+                    gameState.tempo = 2;
+                    gameState.indiceSequencia = 0;
+                    document.getElementById('caixaSorteioUI').style.display = 'flex';
+                    document.getElementById('textoComparativoSorteio').innerHTML = `Empate no Mundial - Prorrogação`;
+                    document.getElementById('btnAcaoTurno').innerText = 'Iniciar Prorrogação ⏱️';
+                    adicionarNarrativa(`Fim do Tempo Regulamentar! Empate. Vamos para a Prorrogação!`);
+                    return;
+                } else if (gameState.tempo === 4 && gameState.golsA === gameState.golsB && partidaDados.fase === 'Mundial') {
+                    document.getElementById('caixaSorteioUI').style.display = 'flex';
+                    document.getElementById('textoComparativoSorteio').innerHTML = `Fim da Prorrogação - Empate`;
+                    document.getElementById('btnAcaoTurno').innerText = 'Ir para Penalidades 🎯';
+                    document.getElementById('btnAcaoTurno').onclick = () => {
+                        document.getElementById('btnAcaoTurno').onclick = executarProximoPassoTurno;
+                        iniciarDisputaPenaltis();
+                    };
+                    adicionarNarrativa(`Fim da Prorrogação! Persiste o empate. Clique para ir às Penalidades!`);
+                    return;
+                } else {
+                    encerrarPartidaESalvarLocal();
+                    return;
+                }
+            }
+
+            renderizarPosicoesNoCampo(); 
+            atualizarLabelStatusTurno();
+            document.getElementById('btnAcaoTurno').innerText = 'Sortear Próximo Ataque ⚔️';
+        }
+
+        function iniciarDisputaPenaltis() {
+            gameState.emPenaltis = true;
+            gameState.penaltisState = {
+                cobrancaIndex: 0,
+                tirosA: [],
+                tirosB: [],
+                vezA: Math.random() < 0.5
+            };
+            document.getElementById('caixaSorteioUI').style.display = 'flex';
+            document.getElementById('textoComparativoSorteio').innerHTML = `Disputa de Pênaltis 🎯`;
+            document.getElementById('btnAcaoTurno').innerText = 'Cobrar Próximo Pênalti ⚽';
+            atualizarPlacarUI();
+            renderizarPosicoesNoCampo();
+            adicionarNarrativa(`Fim da Prorrogação! A decisão irá para os Pênaltis!`);
+            let primeiroCobrador = gameState.penaltisState.vezA ? timeA.nome : timeB.nome;
+            adicionarNarrativa(`${primeiroCobrador} começa cobrando nas penalidades...`);
+        }
+
+        function executarPassoPenaltis() {
+            let p = gameState.penaltisState;
+            let cobrandoTimeA = p.vezA;
+            let timeCobradorObj = cobrandoTimeA ? timeA : timeB;
+            let elencoCobrador = cobrandoTimeA ? titularesA : titularesB;
+
+            let batedor = elencoCobrador[p.cobrancaIndex % elencoCobrador.length] || elencoCobrador[0];
+
+            adicionarNarrativa(`${batedor.nome} (${timeCobradorObj.nome}) vai para a cobrança...`);
+            
+            setTimeout(() => {
+                let acertou = Math.random() < 0.65;
+
+                setTimeout(() => {
+                    if (acertou) {
+                        if (cobrandoTimeA) p.tirosA.push(true);
+                        else p.tirosB.push(true);
+                        adicionarNarrativa(`Goooolll!!!! 🟢 (${batedor.nome} converteu com categoria na gaveta!)`);
+                    } else {
+                        if (cobrandoTimeA) p.tirosA.push(false);
+                        else p.tirosB.push(false);
+                        adicionarNarrativa(`Errou!! 🔴 (${batedor.nome} isolou ou o goleiro espalmou!)`);
+                    }
+
+                    p.cobrancaIndex++;
+                    atualizarPlacarUI();
+                    renderizarPosicoesNoCampo();
+
+                    let totalA = p.tirosA.length;
+                    let totalB = p.tirosB.length;
+                    let golsA = p.tirosA.filter(Boolean).length;
+                    let golsB = p.tirosB.filter(Boolean).length;
+
+                    if (totalA >= 5 && totalB >= 5 && totalA === totalB && golsA !== golsB) {
+                        concluirDisputaPenaltis(golsA, golsB);
+                        return;
+                    } else if (totalA >= 5 && totalB >= 5 && totalA !== totalB) {
+                        let restantesA = 5 - totalA;
+                        let restantesB = 5 - totalB;
+                        if (Math.abs(golsA - golsB) > Math.max(restantesA, restantesB)) {
+                            concluirDisputaPenaltis(golsA, golsB);
+                            return;
+                        }
+                    }
+
+                    p.vezA = !p.vezA;
+                    document.getElementById('btnAcaoTurno').innerText = 'Cobrar Próximo Pênalti ⚽';
+                }, 800);
+            }, 800);
+        }
+
+        function concluirDisputaPenaltis(golsA, golsB) {
+            gameState.tempo = 4;
+            let penA = gameState.penaltisState.tirosA.filter(Boolean).length;
+            let penB = gameState.penaltisState.tirosB.filter(Boolean).length;
+
+            if (penA > penB) gameState.golsA++;
+            else gameState.golsB++;
+
+            atualizarPlacarUI();
+            adicionarNarrativa(`Fim das penalidades! Placar das cobranças: ${penA} a ${penB}.`);
+            encerrarPartidaESalvarLocal();
+        }
+
+        async function encerrarPartidaESalvarLocal() {
+            gameState.tempo = 4;
+            document.getElementById('painelJogoAtivo').style.display = 'none';
+            document.getElementById('avisoFimPartida').style.display = 'block';
+
+            let penAVal = gameState.emPenaltis ? gameState.penaltisState.tirosA.filter(Boolean).length : null;
+            let penBVal = gameState.emPenaltis ? gameState.penaltisState.tirosB.filter(Boolean).length : null;
+
+            let penAStr = penAVal !== null ? ` (${penAVal})` : '';
+            let penBStr = penBVal !== null ? ` (${penBVal})` : '';
+
+            let partidasLocal = await lerLocal("partidas");
+            let pObj = partidasLocal.find(x => x.id === partidaId);
+            if (pObj) {
+                pObj.gols_a = gameState.golsA;
+                pObj.gols_b = gameState.golsB;
+                if (penAVal !== null && penBVal !== null) {
+                    pObj.pen_a = penAVal;
+                    pObj.pen_b = penBVal;
+                }
+                pObj.status = 'concluido';
+                await salvarLocal("partidas", pObj);
+            }
+
+            let todosTitulares = [...titularesA, ...titularesB];
+            let jogadoresLocal = await lerLocal("jogadores");
+
+            for (let jog of todosTitulares) {
+                let jDb = jogadoresLocal.find(x => x.id === jog.id);
+                if (jDb && partidaDados.fase !== 'Mundial') {
+                    jDb.energia = Math.max(0, (jDb.energia ?? 2) - 1);
+                    await salvarLocal("jogadores", jDb);
+                }
+
+                await salvarLocal("estatisticas_partida_jogadores", {
+                    partida_id: parseInt(partidaId),
+                    jogador_id: jog.id,
+                    gols: jog.gols || 0,
+                    assistencias_gols: jog.assistencia_gols || 0,
+                    assistencia_def: jog.assistencia_def || 0,
+                    desarmes: jog.desarmes || 0,
+                    defesas: jog.defesas || 0,
+                    partidas: 1
+                });
+            }
+
+            let ganhoA = 10000, ganhoB = 10000;
+            let resA = 0, empA = 0, derA = 0;
+            let resB = 0, empB = 0, derB = 0;
+            let statusA = "Derrota", statusB = "Derrota";
+
+            if (gameState.golsA > gameState.golsB) {
+                resA = 1; ganhoA = 50000; statusA = "Vitória";
+                derB = 1; ganhoB = 10000; statusB = "Derrota";
+            } else if (gameState.golsB > gameState.golsA) {
+                resB = 1; ganhoB = 50000; statusA = "Vitória";
+                derA = 1; ganhoA = 10000; statusA = "Derrota";
+            } else {
+                empA = 1; ganhoA = 30000; statusA = "Empate";
+                empB = 1; ganhoB = 30000; statusB = "Empate";
+            }
+
+            let infoFaseCategoria = `${partidaDados.categoria || 'Campeonato'} - ${partidaDados.fase || 'Fase Única'}`;
+            let timesLocal = await lerLocal("times");
+            
+            let tAObj = timesLocal.find(x => x.id === timeA.id);
+            let saldoInicialA = tAObj ? (tAObj.dinheiro || 1000000) : 1000000;
+            let saldoFinalA = saldoInicialA + ganhoA;
+
+            if (tAObj) {
+                tAObj.jogos = (tAObj.jogos || 0) + 1;
+                tAObj.vitorias = (tAObj.vitorias || 0) + resA;
+                tAObj.empates = (tAObj.empates || 0) + empA;
+                tAObj.derrotas = (tAObj.derrotas || 0) + derA;
+                tAObj.gols_pro = (tAObj.gols_pro || 0) + gameState.golsA;
+                tAObj.gols_contra = (tAObj.gols_contra || 0) + gameState.golsB;
+                tAObj.dinheiro = saldoFinalA;
+                await salvarLocal("times", tAObj);
+            }
+
+            await salvarLocal("historico_financeiro", {
+                time_id: timeA.id,
+                tipo: 'ganho',
+                descricao: `${infoFaseCategoria} - ${statusA} (Saldo Inicial: R$ ${saldoInicialA.toLocaleString('pt-BR')} | Premiação: ${ganhoA === 50000 ? 'Vitória +50k' : (ganhoA === 30000 ? 'Empate +30k' : 'Derrota +10k')})\n${timeA.nome} ${gameState.golsA}${penAStr} x ${gameState.golsB}${penBStr} ${timeB.nome}`,
+                valor: ganhoA,
+                saldo_apos: saldoFinalA
+            });
+
+            let tBObj = timesLocal.find(x => x.id === timeB.id);
+            let saldoInicialB = tBObj ? (tBObj.dinheiro || 1000000) : 1000000;
+            let saldoFinalB = saldoInicialB + ganhoB;
+
+            if (tBObj) {
+                tBObj.jogos = (tBObj.jogos || 0) + 1;
+                tBObj.vitorias = (tBObj.vitorias || 0) + resB;
+                tBObj.empates = (tBObj.empates || 0) + empB;
+                tBObj.derrotas = (tBObj.derrotas || 0) + derB;
+                tBObj.gols_pro = (tBObj.gols_pro || 0) + gameState.golsB;
+                tBObj.gols_contra = (tBObj.gols_contra || 0) + gameState.golsA;
+                tBObj.dinheiro = saldoFinalB;
+                await salvarLocal("times", tBObj);
+            }
+
+            await salvarLocal("historico_financeiro", {
+                time_id: timeB.id,
+                tipo: 'ganho',
+                descricao: `${infoFaseCategoria} - ${statusB} (Saldo Inicial: R$ ${saldoInicialB.toLocaleString('pt-BR')} | Premiação: ${ganhoB === 50000 ? 'Vitória +50k' : (ganhoB === 30000 ? 'Empate +30k' : 'Derrota +10k')})\n${timeB.nome} ${gameState.golsB}${penBStr} x ${gameState.golsA}${penAStr} ${timeA.nome}`,
+                valor: ganhoB,
+                saldo_apos: saldoFinalB
+            });
+        }
+
+        function fecharAvisoFim() {
+            document.getElementById('avisoFimPartida').style.display = 'none';
+            document.getElementById('btnVoltarJogo').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

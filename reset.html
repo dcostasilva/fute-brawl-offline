@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Fim de Temporada - Fute-Brawl (Offline)</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        header {
+            width: 100%;
+            padding: 15px;
+            background: #1e1e1e;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            border-bottom: 2px solid #2e7d32;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.3rem;
+            color: #4caf50;
+        }
+        .painel-reset {
+            width: 90%;
+            max-width: 520px;
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            text-align: center;
+            margin-bottom: 80px;
+        }
+        .btn-acao-reset {
+            background-color: #2e7d32;
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 8px rgba(46, 125, 50, 0.3);
+        }
+        .btn-acao-reset:hover {
+            background-color: #1b5e20;
+        }
+        .btn-acao-reset:disabled {
+            background-color: #444 !important;
+            color: #777 !important;
+            cursor: not-allowed !important;
+            box-shadow: none;
+        }
+        .resultado-bloco {
+            background: #121212;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 15px;
+            text-align: left;
+            max-height: 350px;
+            overflow-y: auto;
+            display: none;
+        }
+        .secao-premio-card {
+            background: #1e1e1e;
+            border-left: 4px solid #ff9800;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+        }
+        .secao-premio-card h4 {
+            margin: 0 0 6px 0;
+            color: #ff9800;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #333;
+            padding-bottom: 4px;
+        }
+        .premio-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .premio-item:last-child {
+            border-bottom: none;
+        }
+        .btn-fechar-bloco {
+            background-color: #f44336;
+            color: #fff;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            margin-bottom: 10px;
+            float: right;
+        }
+        .btn-ver-resultados {
+            background-color: #ff9800;
+            color: #fff;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            margin-bottom: 10px;
+            margin-right: 6px;
+            float: right;
+        }
+        .btn-voltar-menu {
+            background-color: #2196f3;
+            color: #fff;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        .painel-manual-divisoes {
+            background: #121212;
+            border: 2px solid #e91e63;
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 15px;
+            text-align: left;
+            display: none;
+        }
+        .liga-bloco-manual {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 8px;
+            font-size: 0.8rem;
+        }
+        .liga-bloco-manual h5 {
+            margin: 0 0 6px 0;
+            color: #e91e63;
+            border-bottom: 1px solid #333;
+            padding-bottom: 3px;
+        }
+        .time-linha-manual {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #252525;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>⚙️ Gerenciamento de Fim de Temporada</h1>
+    </header>
+
+    <div class="painel-reset">
+        <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 20px;">A temporada foi concluída! Gerencie as premiações, títulos e o avanço para o próximo ciclo.</p>
+        
+        <div id="painelBotoesReset">
+            <button class="btn-acao-reset" id="btnAtribuirTitulos" onclick="executarAtribuicaoTitulosPremiacoes()">🥇 Atribuir Títulos e Premiações Finais</button>
+            <button class="btn-acao-reset" id="btnRenovacoes" onclick="executarRenovacoesContratuais()" style="background-color: #1565c0;" disabled>📝 Renovações Contratuais (-10% Elenco)</button>
+            <button class="btn-acao-reset" id="btnPremiarJogadores" onclick="executarPremiacaoJogadores()" style="background-color: #ff9800;" disabled>🏅 Premiar Melhores da Temporada</button>
+            <button class="btn-acao-reset" id="btnAtualizarIdades" onclick="executarAtualizacaoIdadesAposentadoria()" style="background-color: #9c27b0;" disabled>👴 Atualizar Idades e Aposentadorias (37+)</button>
+            <button class="btn-acao-reset" id="btnMercadoIA" onclick="executarMercadoReforcosIA()" style="background-color: #00897b;" disabled>🤖 Reforços Automáticos dos Clubes (IA)</button>
+            <button class="btn-acao-reset" id="btnNovaTemporada" onclick="abrirPainelControleManualDivisoes()" style="background-color: #e91e63;" disabled>🚀 Iniciar Nova Temporada (Configurar Ligas)</button>
+        </div>
+
+        <!-- PAINEL DE CONTROLE MANUAL DE DIVISÕES -->
+        <div class="painel-manual-divisoes" id="painelManualDivisoes">
+            <h3 style="color: #e91e63; font-size: 0.95rem; text-align: center; margin-top: 0;">🎮 Configuração Manual de Divisões</h3>
+            <p style="font-size: 0.75rem; color: #ccc; text-align: center; margin-bottom: 10px;">Confira a tabela final e ajuste a liga de cada clube para a próxima temporada:</p>
+            <div id="containerListagemManualLigas"></div>
+            <button class="btn-acao-reset" style="background-color: #e91e63; margin-top: 10px; padding: 10px;" onclick="salvarDivisoesManuaisEIniciarTemporada()">Salvar Divisões e Iniciar Nova Temporada 🚀</button>
+        </div>
+
+        <div class="resultado-bloco" id="blocoResultadosPremiacao">
+            <button class="btn-fechar-bloco" onclick="fecharBloco('blocoResultadosPremiacao')">Fechar Lista ✖</button>
+            <h3 style="color: #4caf50; font-size: 1rem; margin-top: 0; text-align: center; clear: both;">🏆 Premiações e Títulos Distribuidos</h3>
+            <div id="conteudoPremiacoesLista"></div>
+        </div>
+
+        <div class="resultado-bloco" id="blocoResultadosRenovacoes">
+            <button class="btn-fechar-bloco" onclick="fecharBloco('blocoResultadosRenovacoes')">Fechar Lista ✖</button>
+            <h3 style="color: #90caf9; font-size: 1rem; margin-top: 0; text-align: center; clear: both;">📝 Balanço de Renovações Contratuais</h3>
+            <div id="conteudoRenovacoesLista"></div>
+        </div>
+
+        <div class="resultado-bloco" id="blocoResultadosJogadores">
+            <button class="btn-fechar-bloco" onclick="fecharBloco('blocoResultadosJogadores')">Fechar Lista ✖</button>
+            <h3 style="color: #ff9800; font-size: 1rem; margin-top: 0; text-align: center; clear: both;">🏅 Craques da Temporada (Top 3)</h3>
+            <div id="conteudoJogadoresLista"></div>
+        </div>
+
+        <div class="resultado-bloco" id="blocoResultadosAposentadorias">
+            <button class="btn-fechar-bloco" onclick="fecharBloco('blocoResultadosAposentadorias')">Fechar Lista ✖</button>
+            <h3 style="color: #ab47bc; font-size: 1rem; margin-top: 0; text-align: center; clear: both;">👴 Relatório de Idades, Nerfs & Aposentadorias</h3>
+            <div id="conteudoAposentadoriasLista"></div>
+        </div>
+
+        <div class="resultado-bloco" id="blocoResultadosReforcosIA">
+            <button class="btn-fechar-bloco" onclick="fecharBloco('blocoResultadosReforcosIA')">Fechar Lista ✖</button>
+            <h3 style="color: #00897b; font-size: 1rem; margin-top: 0; text-align: center; clear: both;">🤖 Relatório de Reforços dos Clubes (IA)</h3>
+            <div id="conteudoReforcosIALista"></div>
+        </div>
+
+        <button class="btn-voltar-menu" onclick="window.location.replace('index.html')">Voltar ao Menu 🏠</button>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://aqfabyfiuxqqqnzfgiys.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxZmFieWZpdXhxcXFuemZnaXlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3NzU1MzAsImV4cCI6MjEwMjM1MTUzMH0.YirbXzZhQgCEyfEPy5gVDqkBMMJQnpZ-KVmlLJxyv9o';
+        const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const DB_NAME = "FuteBrawlOfflineDB";
+        const DB_VERSION = 2;
+
+        function abrirBancoLocal() {
+            return new Promise((resolve, reject) => {
+                let request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                request.onupgradeneeded = (event) => {
+                    let db = event.target.result;
+                    if (!db.objectStoreNames.contains("times")) db.createObjectStore("times", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("jogadores")) db.createObjectStore("jogadores", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("partidas")) db.createObjectStore("partidas", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("temporadas")) db.createObjectStore("temporadas", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("historico_financeiro")) db.createObjectStore("historico_financeiro", { keyPath: "id", autoIncrement: true });
+                    if (!db.objectStoreNames.contains("estatisticas_partida_jogadores")) db.createObjectStore("estatisticas_partida_jogadores", { keyPath: "id", autoIncrement: true });
+                    if (!db.objectStoreNames.contains("habilidades_custom")) db.createObjectStore("habilidades_custom", { keyPath: "id" });
+                };
+            });
+        }
+
+        async function salvarLocal(storeName, dados) {
+            let db = await abrirBancoLocal();
+            return new Promise((resolve, reject) => {
+                let transaction = db.transaction(storeName, "readwrite");
+                let store = transaction.objectStore(storeName);
+                if (Array.isArray(dados)) {
+                    dados.forEach(item => store.put(item));
+                } else {
+                    store.put(dados);
+                }
+                transaction.oncomplete = () => resolve(true);
+                transaction.onerror = () => reject(transaction.error);
+            });
+        }
+
+        async function lerLocal(storeName) {
+            let db = await abrirBancoLocal();
+            return new Promise((resolve, reject) => {
+                let transaction = db.transaction(storeName, "readonly");
+                let store = transaction.objectStore(storeName);
+                let request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => resolve([]);
+            });
+        }
+
+        let timesCache = [];
+        let jogadoresCache = [];
+        let temporadaAtualId = null;
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            let temporadasLocal = await lerLocal("temporadas");
+            let tempAtiva = temporadasLocal.find(t => t.status === 'em_andamento') || temporadasLocal[temporadasLocal.length - 1];
+            temporadaAtualId = tempAtiva ? tempAtiva.id : 1;
+            timesCache = await lerLocal("times");
+            jogadoresCache = await lerLocal("jogadores");
+
+            let jaDistribuido = localStorage.getItem(`premios_distribuidos_temp_${temporadaAtualId}`);
+            if (jaDistribuido === 'true') {
+                document.getElementById('btnAtribuirTitulos').disabled = true;
+                document.getElementById('btnAtribuirTitulos').innerText = '✅ Premiações já distribuídas';
+                document.getElementById('btnRenovacoes').disabled = false;
+                
+                if (!document.getElementById('btnVerPremios')) {
+                    let btnVer = document.createElement('button');
+                    btnVer.id = 'btnVerPremios';
+                    btnVer.className = 'btn-ver-resultados';
+                    btnVer.innerText = '👁️ Ver Títulos/Prêmios';
+                    btnVer.onclick = () => document.getElementById('blocoResultadosPremiacao').style.display = 'block';
+                    document.getElementById('btnAtribuirTitulos').after(btnVer);
+                }
+                carregarResultadosSalvosNaTela(false);
+            }
+
+            let jaRenovado = localStorage.getItem(`renovacoes_realizadas_temp_${temporadaAtualId}`);
+            if (jaRenovado === 'true') {
+                document.getElementById('btnRenovacoes').disabled = true;
+                document.getElementById('btnRenovacoes').innerText = '✅ Renovações já realizadas';
+                document.getElementById('btnPremiarJogadores').disabled = false;
+
+                if (!document.getElementById('btnVerRenovacoes')) {
+                    let btnVerR = document.createElement('button');
+                    btnVerR.id = 'btnVerRenovacoes';
+                    btnVerR.className = 'btn-ver-resultados';
+                    btnVerR.innerText = '👁️ Ver Renovações';
+                    btnVerR.onclick = () => document.getElementById('blocoResultadosRenovacoes').style.display = 'block';
+                    document.getElementById('btnRenovacoes').after(btnVerR);
+                }
+                carregarRenovacoesSalvasNaTela(false);
+            }
+
+            let jaPremiado = localStorage.getItem(`craques_premiados_temp_${temporadaAtualId}`);
+            if (jaPremiado === 'true') {
+                document.getElementById('btnPremiarJogadores').disabled = true;
+                document.getElementById('btnPremiarJogadores').innerText = '✅ Jogadores premiados';
+                document.getElementById('btnAtualizarIdades').disabled = false;
+
+                if (!document.getElementById('btnVerJogadores')) {
+                    let btnVerJ = document.createElement('button');
+                    btnVerJ.id = 'btnVerJogadores';
+                    btnVerJ.className = 'btn-ver-resultados';
+                    btnVerJ.innerText = '👁️ Ver Craques';
+                    btnVerJ.onclick = () => document.getElementById('blocoResultadosJogadores').style.display = 'block';
+                    document.getElementById('btnPremiarJogadores').after(btnVerJ);
+                }
+                carregarJogadoresSalvosNaTela(false);
+            }
+
+            let jaAtualizadoIdades = localStorage.getItem(`idades_atualizadas_temp_${temporadaAtualId}`);
+            if (jaAtualizadoIdades === 'true') {
+                document.getElementById('btnAtualizarIdades').disabled = true;
+                document.getElementById('btnAtualizarIdades').innerText = '✅ Idades, Nerfs e Substitutos processados';
+                document.getElementById('btnMercadoIA').disabled = false;
+
+                if (!document.getElementById('btnVerAposentadorias')) {
+                    let btnVerA = document.createElement('button');
+                    btnVerA.id = 'btnVerAposentadorias';
+                    btnVerA.className = 'btn-ver-resultados';
+                    btnVerA.innerText = '👁️ Ver Relatório';
+                    btnVerA.onclick = () => document.getElementById('blocoResultadosAposentadorias').style.display = 'block';
+                    document.getElementById('btnAtualizarIdades').after(btnVerA);
+                }
+                carregarAposentadoriasSalvosNaTela(false);
+            }
+
+            let jaReforcosIA = localStorage.getItem(`reforcos_ia_realizados_temp_${temporadaAtualId}`);
+            if (jaReforcosIA === 'true') {
+                document.getElementById('btnMercadoIA').disabled = true;
+                document.getElementById('btnMercadoIA').innerText = '✅ Reforços de IA processados';
+                document.getElementById('btnNovaTemporada').disabled = false;
+
+                if (!document.getElementById('btnVerReforcosIA')) {
+                    let btnVerIA = document.createElement('button');
+                    btnVerIA.id = 'btnVerReforcosIA';
+                    btnVerIA.className = 'btn-ver-resultados';
+                    btnVerIA.innerText = '👁️ Ver Reforços IA';
+                    btnVerIA.onclick = () => document.getElementById('blocoResultadosReforcosIA').style.display = 'block';
+                    document.getElementById('btnMercadoIA').after(btnVerIA);
+                }
+                carregarReforcosIASalvosNaTela(false);
+            }
+        });
+
+        const normalizar = (str) => (str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/-/g, ' ').trim();
+
+        function calcularRankJogador(j) {
+            let posNorm = normalizar(j.posicao);
+            let valorAtributo = 0;
+
+            if (posNorm.includes('goleiro')) {
+                valorAtributo = j.reflexo || 0;
+            } 
+            else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
+                valorAtributo = j.marcacao || 0;
+            } 
+            else {
+                let vel = j.velocidade || 0;
+                let prec = j.precisao || 0;
+                let assis = j.assistencia || 0;
+                valorAtributo = Math.max(vel, prec, assis);
+            }
+
+            if (valorAtributo <= 0) return { nome: 'Rank-E', pts: 1 };
+            if (valorAtributo === 1) return { nome: 'Rank-D', pts: 2 };
+            if (valorAtributo === 2) return { nome: 'Rank-C', pts: 3 };
+            if (valorAtributo === 3) return { nome: 'Rank-B', pts: 4 };
+            if (valorAtributo === 4) return { nome: 'Rank-A', pts: 5 };
+            if (valorAtributo === 5) return { nome: 'Rank-S', pts: 6 };
+            return { nome: 'Rank nacional', pts: 7 };
+        }
+
+        function getBaseValorRank(posNorm, rankName) {
+            if (posNorm.includes('goleiro')) {
+                switch(rankName) {
+                    case 'Rank-E': return 60000;
+                    case 'Rank-D': return 360000;
+                    case 'Rank-C': return 660000;
+                    case 'Rank-B': return 960000;
+                    case 'Rank-A': return 1260000;
+                    case 'Rank-S': return 1560000;
+                    case 'Rank nacional': return 2560000;
+                    default: return 60000;
+                }
+            } else if (posNorm.includes('meia defensivo') || posNorm.includes('md')) {
+                switch(rankName) {
+                    case 'Rank-E': return 120000;
+                    case 'Rank-D': return 420000;
+                    case 'Rank-C': return 720000;
+                    case 'Rank-B': return 1020000;
+                    case 'Rank-A': return 1320000;
+                    case 'Rank-S': return 1620000;
+                    case 'Rank nacional': return 2620000;
+                    default: return 120000;
+                }
+            } else if (posNorm.includes('zagueiro') || posNorm.includes('za')) {
+                switch(rankName) {
+                    case 'Rank-E': return 180000;
+                    case 'Rank-D': return 480000;
+                    case 'Rank-C': return 780000;
+                    case 'Rank-B': return 1080000;
+                    case 'Rank-A': return 1380000;
+                    case 'Rank-S': return 1680000;
+                    case 'Rank nacional': return 2680000;
+                    default: return 180000;
+                }
+            } else if (posNorm.includes('meia ofensivo') || (posNorm.includes('meia') && !posNorm.includes('defensiv')) || posNorm.includes('mo')) {
+                switch(rankName) {
+                    case 'Rank-E': return 240000;
+                    case 'Rank-D': return 540000;
+                    case 'Rank-C': return 840000;
+                    case 'Rank-B': return 1140000;
+                    case 'Rank-A': return 1440000;
+                    case 'Rank-S': return 1740000;
+                    case 'Rank nacional': return 2740000;
+                    default: return 240000;
+                }
+            } else {
+                switch(rankName) {
+                    case 'Rank-E': return 300000;
+                    case 'Rank-D': return 600000;
+                    case 'Rank-C': return 900000;
+                    case 'Rank-B': return 1200000;
+                    case 'Rank-A': return 1500000;
+                    case 'Rank-S': return 1800000;
+                    case 'Rank nacional': return 2800000;
+                    default: return 300000;
+                }
+            }
+        }
+
+        async function construirMapaBonusRankingTemporadaAnterior() {
+            let bonusMap = {};
+            try {
+                if (temporadaAtualId <= 1) return bonusMap;
+                let prevTempId = temporadaAtualId - 1;
+                let partidasLocal = await lerLocal("partidas");
+                let statsPartidasLocal = await lerLocal("estatisticas_partida_jogadores");
+                let jogadoresLocal = await lerLocal("jogadores");
+
+                let idsPartPrev = new Set(partidasLocal.filter(p => p.temporada_id === prevTempId && p.status === 'concluido').map(p => p.id));
+                if (idsPartPrev.size === 0) return bonusMap;
+
+                let mapaSt = {};
+                statsPartidasLocal.forEach(s => {
+                    if (idsPartPrev.has(s.partida_id)) {
+                        if (!mapaSt[s.jogador_id]) mapaSt[s.jogador_id] = { gols: 0, assistencia_gols: 0, desarmes: 0, assistencia_def: 0, defesas: 0, partidas: 0 };
+                        mapaSt[s.jogador_id].gols += (s.gols || 0);
+                        mapaSt[s.jogador_id].assistencia_gols += (s.assistencias_gols || 0);
+                        mapaSt[s.jogador_id].desarmes += (s.desarmes || 0);
+                        mapaSt[s.jogador_id].assistencia_def += (s.assistencia_def || 0);
+                        mapaSt[s.jogador_id].defesas += (s.defesas || 0);
+                        mapaSt[s.jogador_id].partidas += (s.partidas || 0);
+                    }
+                });
+
+                let lGol = [], lZag = [], lMD = [], lMO = [], lAt = [];
+                jogadoresLocal.forEach(atleta => {
+                    let pNorm = normalizar(atleta.posicao);
+                    let st = mapaSt[atleta.id] || { gols: 0, assistencia_gols: 0, desarmes: 0, assistencia_def: 0, defesas: 0, partidas: 0 };
+                    let reg = { jogador: atleta, est: 0, desempate: 0 };
+
+                    if (pNorm.includes('goleiro')) {
+                        reg.est = st.defesas; reg.desempate = st.partidas; lGol.push(reg);
+                    } else if (pNorm.includes('zagueiro')) {
+                        reg.est = st.desarmes; reg.desempate = st.assistencia_def; lZag.push(reg);
+                    } else if (pNorm.includes('meia defensivo')) {
+                        reg.est = st.desarmes; reg.desempate = st.assistencia_def; lMD.push(reg);
+                    } else if (pNorm.includes('meia ofensivo') || (pNorm.includes('meia') && !pNorm.includes('defensiv'))) {
+                        reg.est = st.gols; reg.desempate = st.assistencia_gols; lMO.push(reg);
+                    } else if (pNorm.includes('atacante')) {
+                        reg.est = st.gols; reg.desempate = st.assistencia_gols; lAt.push(reg);
+                    }
+                });
+
+                let ordenarRank = (a, b) => b.est - a.est || b.desempate - a.desempate || a.jogador.nome.localeCompare(b.jogador.nome);
+                
+                [lGol, lZag, lMD, lMO, lAt].forEach(lista => {
+                    lista.sort(ordenarRank);
+                    let top10 = lista.slice(0, 10);
+                    top10.forEach((x, idx) => {
+                        let posicaoRanking = idx + 1;
+                        let bonus = (11 - posicaoRanking) * 500000;
+                        bonusMap[x.jogador.id] = bonus;
+                    });
+                });
+            } catch (err) {
+                console.error("Erro ao calcular bônus de ranking anterior:", err);
+            }
+            return bonusMap;
+        }
+
+        async function calcularValorMercado(j, bonusMap = null) {
+            let rank = calcularRankJogador(j);
+            let posNorm = normalizar(j.posicao);
+            let base = getBaseValorRank(posNorm, rank.nome);
+
+            if (j.habilidade_id) {
+                base += 3000000;
+            }
+
+            if (!bonusMap) {
+                bonusMap = await construirMapaBonusRankingTemporadaAnterior();
+            }
+            if (bonusMap[j.id]) {
+                base += bonusMap[j.id];
+            }
+
+            return base;
+        }
+
+        function fecharBloco(idBloco) {
+            document.getElementById(idBloco).style.display = 'none';
+        }
+
+        async function executarAtribuicaoTitulosPremiacoes() {
+            if (!confirm("Deseja calcular e distribuir os títulos e premiações finais da temporada para os times e atletas? Essa ação só pode ser feita uma vez.")) return;
+
+            let partidasLocal = await lerLocal("partidas");
+            let partidasTemp = partidasLocal.filter(p => p.temporada_id === temporadaAtualId && p.status === 'concluido');
+            let htmlResultados = '';
+
+            let premiacoesFinanceiras = {};
+            function adicionarPremio(timeId, valor) {
+                if (!premiacoesFinanceiras[timeId]) premiacoesFinanceiras[timeId] = 0;
+                premiacoesFinanceiras[timeId] += valor;
+            }
+
+            let tabelaLigasConfig = {
+                "Liga A": { 1: 1500000, 2: 1200000, 3: 900000 },
+                "Liga B": { 1: 1100000, 2: 900000, 3: 700000 },
+                "Liga C": { 1: 900000, 2: 700000, 3: 500000 },
+                "Liga D": { 1: 700000, 2: 500000, 3: 300000 }
+            };
+
+            Object.keys(tabelaLigasConfig).forEach(ligaNome => {
+                let idsTimesNoGrupo = new Set();
+                let fasesAlvo = ['1ª Fase Liga', '2ª Fase Liga'];
+                
+                partidasTemp.forEach(p => {
+                    if (fasesAlvo.includes(p.fase) && p.categoria === ligaNome) {
+                        if (p.time_a_id) idsTimesNoGrupo.add(p.time_a_id);
+                        if (p.time_b_id) idsTimesNoGrupo.add(p.time_b_id);
+                    }
+                });
+
+                let timesDaLiga = timesCache.filter(t => idsTimesNoGrupo.has(t.id));
+                if (timesDaLiga.length === 0) timesDaLiga = timesCache.filter(t => (t.divisao || 'Liga A') === ligaNome);
+
+                let mapaLiga = {};
+                timesDaLiga.forEach(t => mapaLiga[t.id] = { id: t.id, nome: t.nome, p: 0, v: 0, e: 0, d: 0, sg: 0, gp: 0 });
+
+                let jogosLiga = partidasTemp.filter(p => (p.fase === '1ª Fase Liga' || p.fase === '2ª Fase Liga') && p.categoria === ligaNome);
+                jogosLiga.forEach(h => {
+                    let tA = mapaLiga[h.time_a_id], tB = mapaLiga[h.time_b_id];
+                    if (tA && tB) {
+                        tA.sg += (h.gols_a - h.gols_b); tB.sg += (h.gols_b - h.gols_a);
+                        tA.gp += h.gols_a; tB.gp += h.gols_b;
+                        if (h.gols_a > h.gols_b) { tA.v++; tA.p += 3; } else if (h.gols_b > h.gols_a) { tB.v++; tB.p += 3; } else { tA.p++; tB.p++; }
+                    }
+                });
+
+                let rankingLiga = Object.values(mapaLiga).sort((a,b) => b.p - a.p || (b.sg - a.sg) || (b.gp - a.gp) || b.v - a.v);
+                let premiosLigaCfg = tabelaLigasConfig[ligaNome];
+
+                htmlResultados += `<div class="secao-premio-card"><h4>🏆 Ligas - ${ligaNome}</h4>`;
+                [1, 2, 3].forEach(pos => {
+                    let timeRank = rankingLiga[pos - 1];
+                    if (timeRank) {
+                        let valorPremio = premiosLigaCfg[pos];
+                        adicionarPremio(timeRank.id, valorPremio);
+                        let medalha = pos === 1 ? '🥇' : (pos === 2 ? '🥈' : '🥉');
+                        htmlResultados += `<div class="premio-item"><span>${medalha} ${pos}º - ${timeRank.nome}</span><b style="color:#4caf50;">R$ ${valorPremio.toLocaleString('pt-BR')}</b></div>`;
+
+                        if (ligaNome === 'Liga A' && pos === 1) {
+                            let tReal = timesCache.find(x => x.id === timeRank.id);
+                            if (tReal) {
+                                tReal.liga = (tReal.liga || 0) + 1;
+                                jogadoresCache.forEach(j => {
+                                    if (j.time_id === tReal.id && !j.aposentado) {
+                                        j.liga = (j.liga || 0) + 1;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                });
+                htmlResultados += `</div>`;
+            });
+
+            let premioRegionalCfg = { 1: 1000000, 2: 750000, 3: 500000 };
+            ["Região 1", "Região 2", "Região 3", "Região 4"].forEach(regNome => {
+                let timesReg = timesCache.filter(t => t.regiao === regNome);
+                let mapaReg = {};
+                timesReg.forEach(t => mapaReg[t.id] = { id: t.id, nome: t.nome, p: 0, v: 0, sg: 0, gp: 0 });
+
+                let jogosReg = partidasTemp.filter(p => (p.fase === '1ª Fase Regional' || p.fase === '2ª Fase Regional') && p.categoria === regNome);
+                jogosReg.forEach(h => {
+                    let tA = mapaReg[h.time_a_id], tB = mapaReg[h.time_b_id];
+                    if (tA && tB) {
+                        tA.sg += (h.gols_a - h.gols_b); tB.sg += (h.gols_b - h.gols_a);
+                        tA.gp += h.gols_a; tB.gp += h.gols_b;
+                        if (h.gols_a > h.gols_b) { tA.v++; tA.p += 3; } else if (h.gols_b > h.gols_a) { tB.v++; tB.p += 3; } else { tA.p++; tB.p++; }
+                    }
+                });
+
+                let rankingReg = Object.values(mapaReg).sort((a,b) => b.p - a.p || (b.sg - a.sg) || (b.gp - a.gp) || b.v - a.v);
+
+                htmlResultados += `<div class="secao-premio-card"><h4>🌍 Regionais - ${regNome}</h4>`;
+                [1, 2, 3].forEach(pos => {
+                    let timeRank = rankingReg[pos - 1];
+                    if (timeRank) {
+                        let valorPremio = premioRegionalCfg[pos];
+                        adicionarPremio(timeRank.id, valorPremio);
+                        let medalha = pos === 1 ? '🥇' : (pos === 2 ? '🥈' : '🥉');
+                        htmlResultados += `<div class="premio-item"><span>${medalha} ${pos}º - ${timeRank.nome}</span><b style="color:#4caf50;">R$ ${valorPremio.toLocaleString('pt-BR')}</b></div>`;
+
+                        if (pos === 1) {
+                            let tReal = timesCache.find(x => x.id === timeRank.id);
+                            if (tReal) {
+                                tReal.regionais = (tReal.regionais || 0) + 1;
+                                jogadoresCache.forEach(j => {
+                                    if (j.time_id === tReal.id && !j.aposentado) {
+                                        j.regionais = (j.regionais || 0) + 1;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                });
+                htmlResultados += `</div>`;
+            });
+
+            let jogoFinal = partidasTemp.find(p => p.fase === 'Mundial' && p.categoria === 'Final' && p.status === 'concluido');
+            let jogosSemfi = partidasTemp.filter(p => p.fase === 'Mundial' && p.categoria === 'Semifinal' && p.status === 'concluido');
+
+            if (jogoFinal) {
+                let campeaoMundialId = jogoFinal.gols_a > jogoFinal.gols_b ? jogoFinal.time_a_id : jogoFinal.time_b_id;
+                let viceMundialId = jogoFinal.gols_a > jogoFinal.gols_b ? jogoFinal.time_b_id : jogoFinal.time_a_id;
+
+                let eliminadosSemifinal = [];
+                jogosSemfi.forEach(sf => {
+                    let perdedorId = sf.gols_a > sf.gols_b ? sf.time_b_id : sf.time_a_id;
+                    let tObj = timesCache.find(x => x.id === perdedorId);
+                    let golsFeitosMundial = 0;
+                    partidasTemp.filter(p => p.fase === 'Mundial' && (p.time_a_id === perdedorId || p.time_b_id === perdedorId)).forEach(pm => {
+                        golsFeitosMundial += (pm.time_a_id === perdedorId ? pm.gols_a : pm.gols_b);
+                    });
+                    eliminadosSemifinal.push({ id: perdedorId, nome: tObj ? tObj.nome : 'Time', gp: golsFeitosMundial });
+                });
+
+                eliminadosSemifinal.sort((a,b) => b.gp - a.gp);
+
+                htmlResultados += `<div class="secao-premio-card"><h4>⚡ Mundial de Clubes</h4>`;
+                
+                if (eliminadosSemifinal.length > 0) {
+                    let terceiroLugar = eliminadosSemifinal[0];
+                    adicionarPremio(terceiroLugar.id, 900000);
+                    let tObj3 = timesCache.find(x => x.id === terceiroLugar.id);
+                    htmlResultados += `<div class="premio-item"><span>🥉 3º Lugar (Semifinalista) - ${tObj3 ? tObj3.nome : ''}</span><b style="color:#4caf50;">R$ 900.000</b></div>`;
+                }
+
+                let tObjVice = timesCache.find(x => x.id === viceMundialId);
+                adicionarPremio(viceMundialId, 1200000);
+                htmlResultados += `<div class="premio-item"><span>🥈 2º Lugar (Vice-campeão) - ${tObjVice ? tObjVice.nome : ''}</span><b style="color:#4caf50;">R$ 1.200.000</b></div>`;
+
+                let tObjCamp = timesCache.find(x => x.id === campeaoMundialId);
+                adicionarPremio(campeaoMundialId, 1500000);
+                htmlResultados += `<div class="premio-item"><span>🥇 1º Lugar (Vencedor) - ${tObjCamp ? tObjCamp.nome : ''}</span><b style="color:#4caf50;">R$ 1.500.000</b></div>`;
+
+                if (tObjCamp) {
+                    tObjCamp.mundiais = (tObjCamp.mundiais || 0) + 1;
+                    jogadoresCache.forEach(j => {
+                        if (j.time_id === tObjCamp.id && !j.aposentado) {
+                            j.mundiais = (j.mundiais || 0) + 1;
+                        }
+                    });
+                }
+
+                htmlResultados += `</div>`;
+            }
+
+            for (let tId in premiacoesFinanceiras) {
+                let valorPremioTotal = premiacoesFinanceiras[tId];
+                let timeReal = timesCache.find(x => x.id === parseInt(tId));
+                if (timeReal) {
+                    let saldoInicial = timeReal.dinheiro || 100000;
+                    let saldoFinal = saldoInicial + valorPremioTotal;
+                    timeReal.dinheiro = saldoFinal;
+
+                    await salvarLocal("historico_financeiro", {
+                        time_id: timeReal.id,
+                        tipo: 'ganho',
+                        descricao: `Premiação Final de Temporada (Títulos e Posições) (Saldo Inicial: R$ ${saldoInicial.toLocaleString('pt-BR')} | Premiação: +R$ ${valorPremioTotal.toLocaleString('pt-BR')})`,
+                        valor: valorPremioTotal,
+                        saldo_apos: saldoFinal
+                    });
+                }
+            }
+
+            await salvarLocal("times", timesCache);
+            await salvarLocal("jogadores", jogadoresCache);
+            localStorage.setItem(`premios_distribuidos_temp_${temporadaAtualId}`, 'true');
+            localStorage.setItem(`html_premios_temp_${temporadaAtualId}`, htmlResultados);
+
+            document.getElementById('btnAtribuirTitulos').disabled = true;
+            document.getElementById('btnAtribuirTitulos').innerText = '✅ Premiações já distribuídas';
+            document.getElementById('btnRenovacoes').disabled = false;
+
+            if (!document.getElementById('btnVerPremios')) {
+                let btnVer = document.createElement('button');
+                btnVer.id = 'btnVerPremios';
+                btnVer.className = 'btn-ver-resultados';
+                btnVer.innerText = '👁️ Ver Títulos/Prêmios';
+                btnVer.onclick = () => document.getElementById('blocoResultadosPremiacao').style.display = 'block';
+                document.getElementById('btnAtribuirTitulos').after(btnVer);
+            }
+            
+            let bloco = document.getElementById('blocoResultadosPremiacao');
+            document.getElementById('conteudoPremiacoesLista').innerHTML = htmlResultados;
+            bloco.style.display = 'block';
+
+            alert("Títulos e premiações atribuídos com sucesso!");
+        }
+
+        async function executarRenovacoesContratuais() {
+            if (!confirm("Deseja processar as renovações contratuais de todos os clubes? (Desconta 10% do valor total do elenco atualizado de cada time). Essa ação só pode ser feita uma vez.")) return;
+
+            try {
+                let htmlRenovacoes = `<div class="secao-premio-card"><h4>📝 Desconto de Elenco (-10%)</h4>`;
+                let bonusMap = await construirMapaBonusRankingTemporadaAnterior();
+
+                for (let t of timesCache) {
+                    let elencoDoTime = jogadoresCache.filter(j => j.time_id === t.id && !j.aposentado);
+                    let valorTotalElenco = 0;
+                    for (let j of elencoDoTime) {
+                        valorTotalElenco += await calcularValorMercado(j, bonusMap);
+                    }
+
+                    let valorDesconto = Math.round(valorTotalElenco * 0.10);
+                    let saldoAtualAntes = t.dinheiro || 100000;
+                    let saldoAtualApos = saldoAtualAntes - valorDesconto;
+
+                    t.dinheiro = saldoAtualApos;
+
+                    await salvarLocal("historico_financeiro", {
+                        time_id: t.id,
+                        tipo: 'gasto',
+                        descricao: `Renovações Contratuais de Elenco (-10%) (Saldo Inicial: R$ ${saldoAtualAntes.toLocaleString('pt-BR')} | Valor Elenco: R$ ${valorTotalElenco.toLocaleString('pt-BR')} | Desconto: -R$ ${valorDesconto.toLocaleString('pt-BR')})`,
+                        valor: valorDesconto,
+                        saldo_apos: saldoAtualApos
+                    });
+
+                    htmlRenovacoes += `
+                        <div class="premio-item" style="flex-direction:column; align-items:flex-start; gap:2px; margin-bottom:6px;">
+                            <b>${t.nome}</b>
+                            <div style="font-size:0.75rem; color:#aaa; display:flex; justify-content:space-between; width:100%;">
+                                <span>Valor Elenco: R$ ${valorTotalElenco.toLocaleString('pt-BR')}</span> | 
+                                <span style="color:#f44336;">Desc (-10%): -R$ ${valorDesconto.toLocaleString('pt-BR')}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                htmlRenovacoes += `</div>`;
+
+                await salvarLocal("times", timesCache);
+                localStorage.setItem(`renovacoes_realizadas_temp_${temporadaAtualId}`, 'true');
+                localStorage.setItem(`html_renovacoes_temp_${temporadaAtualId}`, htmlRenovacoes);
+
+                document.getElementById('btnRenovacoes').disabled = true;
+                document.getElementById('btnRenovacoes').innerText = '✅ Renovações já realizadas';
+                document.getElementById('btnPremiarJogadores').disabled = false;
+
+                if (!document.getElementById('btnVerRenovacoes')) {
+                    let btnVerR = document.createElement('button');
+                    btnVerR.id = 'btnVerRenovacoes';
+                    btnVerR.className = 'btn-ver-resultados';
+                    btnVerR.innerText = '👁️ Ver Renovações';
+                    btnVerR.onclick = () => document.getElementById('blocoResultadosRenovacoes').style.display = 'block';
+                    document.getElementById('btnRenovacoes').after(btnVerR);
+                }
+
+                let bloco = document.getElementById('blocoResultadosRenovacoes');
+                document.getElementById('conteudoRenovacoesLista').innerHTML = htmlRenovacoes;
+                bloco.style.display = 'block';
+
+                alert("Renovações contratuais processadas com sucesso (-10%)!");
+            } catch (err) {
+                console.error("Erro nas renovações:", err);
+                alert("Ocorreu um erro ao processar as renovações: " + err.message);
+            }
+        }
+
+        // PREMIAÇÃO DOS JOGADORES AJUSTADA COM EXATIDÃO AOS CRITÉRIOS DO RANKING (EXIBINDO APENAS A ESTATÍSTICA PRINCIPAL)
+        async function executarPremiacaoJogadores() {
+            if (!confirm("Deseja calcular e premiar os melhores jogadores estritamente desta temporada nas 5 posições? Essa ação só pode ser feita uma vez.")) return;
+
+            jogadoresCache = await lerLocal("jogadores");
+            let statsPartidas = await lerLocal("estatisticas_partida_jogadores");
+            let partidasLocal = await lerLocal("partidas");
+
+            let idsPartidasTemporada = new Set(partidasLocal.filter(p => p.temporada_id === temporadaAtualId && p.status === 'concluido').map(p => p.id));
+
+            let mapaStats = {}; 
+            statsPartidas.forEach(s => {
+                if (idsPartidasTemporada.has(s.partida_id)) {
+                    if (!mapaStats[s.jogador_id]) mapaStats[s.jogador_id] = { gols: 0, assistencia_gols: 0, desarmes: 0, assistencia_def: 0, defesas: 0, partidas: 0 };
+                    mapaStats[s.jogador_id].gols += (s.gols || 0);
+                    mapaStats[s.jogador_id].assistencia_gols += (s.assistencias_gols || 0);
+                    mapaStats[s.jogador_id].desarmes += (s.desarmes || 0);
+                    mapaStats[s.jogador_id].assistencia_def += (s.assistencia_def || 0);
+                    mapaStats[s.jogador_id].defesas += (s.defesas || 0);
+                    mapaStats[s.jogador_id].partidas += (s.partidas || 0);
+                }
+            });
+
+            let atacantes = [];
+            let meiasOfensivos = [];
+            let meiasDefensivos = [];
+            let zagueiros = [];
+            let goleiros = [];
+
+            jogadoresCache.forEach(j => {
+                let pNorm = normalizar(j.posicao);
+                let st = mapaStats[j.id] || { gols: 0, assistencia_gols: 0, desarmes: 0, assistencia_def: 0, defesas: 0, partidas: 0 };
+                let tObj = timesCache.find(x => x.id === j.time_id) || { nome: 'Agente Livre / Sem Clube' };
+
+                let objReg = { jogador: j, timeNome: tObj.nome, estPrincipal: 0, estDesempate: 0 };
+
+                if (pNorm.includes('goleiro')) {
+                    objReg.estPrincipal = st.defesas;
+                    objReg.estDesempate = st.partidas;
+                    goleiros.push(objReg);
+                } else if (pNorm.includes('zagueiro')) {
+                    objReg.estPrincipal = st.desarmes;
+                    objReg.estDesempate = st.assistencia_def;
+                    zagueiros.push(objReg);
+                } else if (pNorm.includes('meia defensivo')) {
+                    objReg.estPrincipal = st.desarmes;
+                    objReg.estDesempate = st.assistencia_def;
+                    meiasDefensivos.push(objReg);
+                } else if (pNorm.includes('meia ofensivo') || (pNorm.includes('meia') && !pNorm.includes('defensiv'))) {
+                    objReg.estPrincipal = st.gols;
+                    objReg.estDesempate = st.assistencia_gols;
+                    meiasOfensivos.push(objReg);
+                } else if (pNorm.includes('atacante')) {
+                    objReg.estPrincipal = st.gols;
+                    objReg.estDesempate = st.assistencia_gols;
+                    atacantes.push(objReg);
+                }
+            });
+
+            let ordenarRank = (a, b) => b.estPrincipal - a.estPrincipal || b.estDesempate - a.estDesempate || a.jogador.nome.localeCompare(b.jogador.nome);
+
+            atacantes.sort(ordenarRank);
+            meiasOfensivos.sort(ordenarRank);
+            meiasDefensivos.sort(ordenarRank);
+            zagueiros.sort(ordenarRank);
+            goleiros.sort(ordenarRank);
+
+            let topAtacantes = atacantes.slice(0, 3);
+            let topMO = meiasOfensivos.slice(0, 3);
+            let topMD = meiasDefensivos.slice(0, 3);
+            let topZagueiros = zagueiros.slice(0, 3);
+            let topGoleiros = goleiros.slice(0, 3);
+
+            let htmlPremiacaoJogadores = '';
+
+            function processarTopPosicao(tituloPosicao, listaTop, metricaNome) {
+                if (listaTop.length === 0) return '';
+                let blocoHtml = `<div class="secao-premio-card"><h4>🏅 ${tituloPosicao}</h4>`;
+                listaTop.forEach((item, index) => {
+                    let posColocacao = index + 1;
+                    let medalha = posColocacao === 1 ? '🥇' : (posColocacao === 2 ? '🥈' : '🥉');
+                    
+                    if (!item.jogador.conquistas) item.jogador.conquistas = [];
+                    item.jogador.conquistas.push({
+                        temporada: temporadaAtualId,
+                        posicao: posColocacao,
+                        categoria: tituloPosicao,
+                        icone: medalha,
+                        descricao: `${tituloPosicao}: ${posColocacao}º Lugar (${medalha}) - Temporada ${temporadaAtualId}`
+                    });
+
+                    blocoHtml += `
+                        <div class="premio-item">
+                            <span>${medalha} ${posColocacao}º - ${item.jogador.nome} (${item.timeNome})</span>
+                            <b style="color:#ffeb3b;">${item.estPrincipal} ${metricaNome}</b>
+                        </div>
+                    `;
+                });
+                blocoHtml += `</div>`;
+                return blocoHtml;
+            }
+
+            htmlPremiacaoJogadores += processarTopPosicao('Atacantes (AT)', topAtacantes, 'gols');
+            htmlPremiacaoJogadores += processarTopPosicao('Meias Ofensivos (MO)', topMO, 'gols');
+            htmlPremiacaoJogadores += processarTopPosicao('Meias Defensivos (MD)', topMD, 'desarmes');
+            htmlPremiacaoJogadores += processarTopPosicao('Zagueiros (ZA)', topZagueiros, 'desarmes');
+            htmlPremiacaoJogadores += processarTopPosicao('Goleiros (GO)', topGoleiros, 'defesas');
+
+            await salvarLocal("jogadores", jogadoresCache);
+            localStorage.setItem(`craques_premiados_temp_${temporadaAtualId}`, 'true');
+            localStorage.setItem(`html_jogadores_temp_${temporadaAtualId}`, htmlPremiacaoJogadores);
+
+            document.getElementById('btnPremiarJogadores').disabled = true;
+            document.getElementById('btnPremiarJogadores').innerText = '✅ Jogadores premiados';
+            document.getElementById('btnAtualizarIdades').disabled = false;
+
+            if (!document.getElementById('btnVerJogadores')) {
+                let btnVerJ = document.createElement('button');
+                btnVerJ.id = 'btnVerJogadores';
+                btnVerJ.className = 'btn-ver-resultados';
+                btnVerJ.innerText = '👁️ Ver Craques';
+                btnVerJ.onclick = () => document.getElementById('blocoResultadosJogadores').style.display = 'block';
+                document.getElementById('btnPremiarJogadores').after(btnVerJ);
+            }
+
+            let bloco = document.getElementById('blocoResultadosJogadores');
+            document.getElementById('conteudoJogadoresLista').innerHTML = htmlPremiacaoJogadores;
+            bloco.style.display = 'block';
+
+            alert("Craques da temporada premiados e salvos com sucesso!");
+        }
+
+        async function executarAtualizacaoIdadesAposentadoria() {
+            if (!confirm("Deseja atualizar a idade e os atributos dos jogadores (nerf progressivo 37+), processar aposentadorias e gerar substitutos?")) return;
+
+            jogadoresCache = await lerLocal("jogadores");
+            let relatorioRelatorioHtml = `<div class="secao-premio-card"><h4>👴 Relatório de Idades, Nerfs & Aposentadorias</h4>`;
+            let contadorAlterados = 0;
+
+            let novosSubstitutos = [];
+            let maiorIdJogador = jogadoresCache.length > 0 ? Math.max(...jogadoresCache.map(j => j.id)) : 0;
+
+            jogadoresCache.forEach(j => {
+                let idadeAntiga = j.idade || 20;
+                j.idade = idadeAntiga + 1;
+
+                let posNorm = normalizar(j.posicao);
+                let infoNerfAcao = "";
+
+                if (j.idade < 40 && j.aposentado) {
+                    j.aposentado = false;
+                }
+
+                if (!j.aposentado) {
+                    if (j.idade === 37) {
+                        if (posNorm.includes('goleiro')) j.reflexo = Math.max(0, (j.reflexo || 0) - 1);
+                        else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) j.marcacao = Math.max(0, (j.marcacao || 0) - 1);
+                        else {
+                            j.velocidade = Math.max(0, (j.velocidade || 0) - 1);
+                            j.precisao = Math.max(0, (j.precisao || 0) - 1);
+                            j.assistencia = Math.max(0, (j.assistencia || 0) - 1);
+                        }
+                        infoNerfAcao = "📉 Nerf Idade 37 (-1)";
+                    } else if (j.idade === 38) {
+                        if (posNorm.includes('goleiro')) j.reflexo = Math.max(0, (j.reflexo || 0) - 2);
+                        else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) j.marcacao = Math.max(0, (j.marcacao || 0) - 2);
+                        else {
+                            j.velocidade = Math.max(0, (j.velocidade || 0) - 2);
+                            j.precisao = Math.max(0, (j.precisao || 0) - 2);
+                            j.assistencia = Math.max(0, (j.assistencia || 0) - 2);
+                        }
+                        infoNerfAcao = "📉 Nerf Idade 38 (-2)";
+                    } else if (j.idade === 39) {
+                        if (posNorm.includes('goleiro')) j.reflexo = Math.max(0, (j.reflexo || 0) - 3);
+                        else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) j.marcacao = Math.max(0, (j.marcacao || 0) - 3);
+                        else {
+                            j.velocidade = Math.max(0, (j.velocidade || 0) - 3);
+                            j.precisao = Math.max(0, (j.precisao || 0) - 3);
+                            j.assistencia = Math.max(0, (j.assistencia || 0) - 3);
+                        }
+                        infoNerfAcao = "📉 Nerf Idade 39 (-3)";
+                    }
+                }
+
+                if (j.idade >= 40 && !j.aposentado) {
+                    j.aposentado = true;
+                    contadorAlterados++;
+                    let tObj = timesCache.find(x => x.id === j.time_id) || { nome: 'Agente Livre / Sem Clube' };
+                    
+                    maiorIdJogador++;
+                    let novoAtleta = {
+                        id: maiorIdJogador,
+                        nome: `Substituto ${j.nome.split(' ')[0]}`,
+                        posicao: j.posicao,
+                        time_id: null,
+                        numero: Math.floor(Math.random() * 90) + 1,
+                        idade: 18,
+                        energia: 2,
+                        desc: `Atleta jovem gerado automaticamente para repor a aposentadoria de ${j.nome}.`,
+                        habilidade_id: null,
+                        velocidade: 0, precisao: 0, assistencia: 0, marcacao: 0, reflexo: 0,
+                        gols: 0, partidas: 0, assistencia_gols: 0, assistencia_defensiva: 0, desarmes: 0, defesas: 0,
+                        mundiais: 0, regionais: 0, liga: 0, conquistas: [], aposentado: false
+                    };
+
+                    let attrAleatorio = () => Math.floor(Math.random() * 6);
+                    if (posNorm.includes('goleiro')) {
+                        novoAtleta.reflexo = attrAleatorio();
+                    } else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
+                        novoAtleta.marcacao = attrAleatorio();
+                    } else {
+                        novoAtleta.velocidade = attrAleatorio();
+                        novoAtleta.precisao = attrAleatorio();
+                        novoAtleta.assistencia = attrAleatorio();
+                    }
+
+                    novosSubstitutos.push(novoAtleta);
+
+                    relatorioRelatorioHtml += `
+                        <div class="premio-item" style="flex-direction:column; align-items:flex-start; gap:2px; margin-bottom:6px;">
+                            <span><b>${j.nome}</b> (${tObj.nome}) - ${j.idade} anos <span style="color:#ab47bc;">[Aposentado]</span></span>
+                            <small style="color:#4caf50;">➕ Criado substituto: ${novoAtleta.nome} (${novoAtleta.posicao}, 18 anos, Agente Livre)</small>
+                        </div>
+                    `;
+                } else if (infoNerfAcao) {
+                    let tObj = timesCache.find(x => x.id === j.time_id) || { nome: 'Agente Livre / Sem Clube' };
+                    relatorioRelatorioHtml += `
+                        <div class="premio-item">
+                            <span><b>${j.nome}</b> (${tObj.nome}) - ${j.idade} anos</span>
+                            <b style="color:#ff9800;">${infoNerfAcao}</b>
+                        </div>
+                    `;
+                }
+            });
+
+            if (contadorAlterados === 0 && relatorioRelatorioHtml.indexOf('Nerf') === -1) {
+                relatorioRelatorioHtml += `<div style="text-align:center; color:#888; padding:6px;">Nenhum atleta atingiu idade de nerf (37+) ou aposentadoria nesta virada de ano.</div>`;
+            }
+
+            relatorioRelatorioHtml += `</div>`;
+
+            jogadoresCache.push(...novosSubstitutos);
+
+            await salvarLocal("jogadores", jogadoresCache);
+            localStorage.setItem(`idades_atualizadas_temp_${temporadaAtualId}`, 'true');
+            localStorage.setItem(`html_aposentadorias_temp_${temporadaAtualId}`, relatorioRelatorioHtml);
+
+            document.getElementById('btnAtualizarIdades').disabled = true;
+            document.getElementById('btnAtualizarIdades').innerText = '✅ Idades, Nerfs e Substitutos processados';
+            document.getElementById('btnMercadoIA').disabled = false;
+
+            if (!document.getElementById('btnVerAposentadorias')) {
+                let btnVerA = document.createElement('button');
+                btnVerA.id = 'btnVerAposentadorias';
+                btnVerA.className = 'btn-ver-resultados';
+                btnVerA.innerText = '👁️ Ver Relatório';
+                btnVerA.onclick = () => document.getElementById('blocoResultadosAposentadorias').style.display = 'block';
+                document.getElementById('btnAtualizarIdades').after(btnVerA);
+            }
+
+            let bloco = document.getElementById('blocoResultadosAposentadorias');
+            document.getElementById('conteudoAposentadoriasLista').innerHTML = relatorioRelatorioHtml;
+            bloco.style.display = 'block';
+
+            alert("Atualização de idades, aplicação de nerfs por idade e substitutos gerados com sucesso!");
+        }
+
+        async function executarMercadoReforcosIA() {
+            if (!confirm("Deseja processar o mercado de reforços automáticos para os clubes controlados pela IA?")) return;
+
+            jogadoresCache = await lerLocal("jogadores");
+            timesCache = await lerLocal("times");
+            let adminTimeId = localStorage.getItem('futebrawl_time_admin') ? parseInt(localStorage.getItem('futebrawl_time_admin')) : null;
+
+            let htmlRelatorioIA = `<div class="secao-premio-card"><h4>🤖 Relatório de Reforços dos Clubes (IA)</h4>`;
+            let totalContratacoes = 0;
+            let totalDispensaTeto = 0;
+            let bonusMap = await construirMapaBonusRankingTemporadaAnterior();
+
+            for (let t of timesCache) {
+                if (t.id === adminTimeId) continue;
+
+                let elencoTimeCheck = jogadoresCache.filter(j => j.time_id === t.id && !j.aposentado);
+                while (elencoTimeCheck.length >= 20) {
+                    let disponiveisDispensar = elencoTimeCheck.filter(j => !j.habilidade_id);
+                    if (disponiveisDispensar.length === 0) disponiveisDispensar = elencoTimeCheck;
+                    
+                    disponiveisDispensar.sort((a, b) => calcularRankJogador(a).pts - calcularRankJogador(b).pts);
+                    let maisFraco = disponiveisDispensar[0];
+
+                    if (maisFraco) {
+                        let valMercado = await calcularValorMercado(maisFraco, bonusMap);
+                        let compensacao = Math.round(valMercado * 0.50);
+
+                        maisFraco.time_id = null;
+                        let saldoAntesDisp = t.dinheiro || 100000;
+                        let saldoAposDisp = saldoAntesDisp + compensacao;
+                        t.dinheiro = saldoAposDisp;
+                        totalDispensaTeto++;
+
+                        await salvarLocal("historico_financeiro", {
+                            time_id: t.id,
+                            tipo: 'ganho',
+                            descricao: `Dispensa por limite de elenco (20+): ${maisFraco.nome} (${maisFraco.posicao}) - Compensação 50% valor de mercado`,
+                            valor: compensacao,
+                            saldo_apos: saldoAposDisp
+                        });
+
+                        htmlRelatorioIA += `<div class="premio-item" style="color:#ff9800;"><span>⚠️ <b>${t.nome}</b> atingiu o limite de 20 jogadores e dispensou ${maisFraco.nome} (${maisFraco.posicao}) (+R$ ${compensacao.toLocaleString('pt-BR')})</span></div>`;
+                    }
+                    elencoTimeCheck = jogadoresCache.filter(j => j.time_id === t.id && !j.aposentado);
+                }
+
+                let elencoTime = jogadoresCache.filter(j => j.time_id === t.id && !j.aposentado);
+                if (elencoTime.length === 0) continue;
+
+                elencoTime.sort((a, b) => calcularRankJogador(a).pts - calcularRankJogador(b).pts);
+                let maisFraco = elencoTime[0];
+                let ptsFraco = calcularRankJogador(maisFraco).pts;
+
+                let posicaoAlvo = maisFraco.posicao;
+                let targetPtsMin = ptsFraco + 1;
+                let targetPtsMax = ptsFraco + 2;
+
+                let agentesLivres = jogadoresCache.filter(j => (!j.time_id || j.time_id === null) && !j.aposentado && normalizar(j.posicao) === normalizar(posicaoAlvo));
+                let candidatos = agentesLivres.filter(j => {
+                    let p = calcularRankJogador(j).pts;
+                    return p === targetPtsMin || p === targetPtsMax;
+                });
+
+                if (candidatos.length === 0) {
+                    htmlRelatorioIA += `<div class="premio-item"><span><b>${t.nome}</b>: Buscou reforço para (${posicaoAlvo}), mas nenhum agente livre compatível foi encontrado.</span></div>`;
+                    continue;
+                }
+
+                candidatos.sort((a, b) => calcularRankJogador(b).pts - calcularRankJogador(a).pts);
+                let alvo = candidatos[0];
+
+                let valorElencoTotal = 0;
+                for (let j of elencoTime) {
+                    valorElencoTotal += await calcularValorMercado(j, bonusMap);
+                }
+                let precoAlvo = await calcularValorMercado(alvo, bonusMap);
+                let dinheiroAtual = t.dinheiro || 100000;
+
+                if (dinheiroAtual - precoAlvo < valorElencoTotal * 0.10) {
+                    htmlRelatorioIA += `<div class="premio-item"><span><b>${t.nome}</b>: Encontrou ${alvo.nome} (${alvo.posicao}), mas a compra violaria o limite financeiro (caixa < 10% do valor do elenco).</span></div>`;
+                    continue;
+                }
+
+                let aceitou = Math.random() <= 0.60;
+                let precoFinal = precoAlvo;
+
+                if (!aceitou) {
+                    precoFinal = precoAlvo * 1.5;
+                    if (dinheiroAtual - precoFinal >= valorElencoTotal * 0.10) {
+                        aceitou = Math.random() <= 0.70;
+                    } else {
+                        aceitou = false;
+                    }
+                }
+
+                if (aceitou) {
+                    let saldoAntesCompra = t.dinheiro || 100000;
+                    let saldoAposCompra = saldoAntesCompra - precoFinal;
+                    t.dinheiro = saldoAposCompra;
+                    alvo.time_id = t.id;
+                    totalContratacoes++;
+
+                    await salvarLocal("historico_financeiro", {
+                        time_id: t.id,
+                        tipo: 'gasto',
+                        descricao: `Contratação de Reforço IA: ${alvo.nome} (${alvo.posicao}) por R$ ${precoFinal.toLocaleString('pt-BR')}`,
+                        valor: precoFinal,
+                        saldo_apos: saldoAposCompra
+                    });
+
+                    htmlRelatorioIA += `<div class="premio-item" style="color:#4caf50;"><span>✅ <b>${t.nome}</b> contratou ${alvo.nome} (${alvo.posicao}) por R$ ${precoFinal.toLocaleString('pt-BR')}!</span></div>`;
+                } else {
+                    let saldoAtualTentativa = t.dinheiro || 100000;
+                    await salvarLocal("historico_financeiro", {
+                        time_id: t.id,
+                        tipo: 'gasto',
+                        descricao: `Tentativa de contratação frustrada do jogador ${alvo.nome} (${alvo.posicao}) - Recusada`,
+                        valor: 0,
+                        saldo_apos: saldoAtualTentativa
+                    });
+
+                    htmlRelatorioIA += `<div class="premio-item" style="color:#f44336;"><span>❌ <b>${t.nome}</b> tentou contratar ${alvo.nome} (${alvo.posicao}), mas a proposta foi recusada.</span></div>`;
+                }
+            }
+
+            if (totalContratacoes === 0 && totalDispensaTeto === 0 && htmlRelatorioIA.indexOf('✅') === -1) {
+                htmlRelatorioIA += `<div style="text-align:center; color:#888; padding:6px;">Nenhum clube IA realizou contratações ou dispensas nesta janela.</div>`;
+            }
+
+            htmlRelatorioIA += `</div>`;
+
+            await salvarLocal("times", timesCache);
+            await salvarLocal("jogadores", jogadoresCache);
+            localStorage.setItem(`reforcos_ia_realizados_temp_${temporadaAtualId}`, 'true');
+            localStorage.setItem(`html_reforcos_ia_temp_${temporadaAtualId}`, htmlRelatorioIA);
+
+            document.getElementById('btnMercadoIA').disabled = true;
+            document.getElementById('btnMercadoIA').innerText = '✅ Reforços de IA processados';
+            document.getElementById('btnNovaTemporada').disabled = false;
+
+            if (!document.getElementById('btnVerReforcosIA')) {
+                let btnVerIA = document.createElement('button');
+                btnVerIA.id = 'btnVerReforcosIA';
+                btnVerIA.className = 'btn-ver-resultados';
+                btnVerIA.innerText = '👁️ Ver Reforços IA';
+                btnVerIA.onclick = () => document.getElementById('blocoResultadosReforcosIA').style.display = 'block';
+                document.getElementById('btnMercadoIA').after(btnVerIA);
+            }
+
+            let bloco = document.getElementById('blocoResultadosReforcosIA');
+            document.getElementById('conteudoReforcosIALista').innerHTML = htmlRelatorioIA;
+            bloco.style.display = 'block';
+
+            alert("Mercado de reforços da IA e controle de limite de elenco processados com sucesso!");
+        }
+
+        async function carregarReforcosIASalvosNaTela(abrirAutomatico = true) {
+            let htmlSalvo = localStorage.getItem(`html_reforcos_ia_temp_${temporadaAtualId}`);
+            if (htmlSalvo) {
+                document.getElementById('conteudoReforcosIALista').innerHTML = htmlSalvo;
+                if (abrirAutomatico) document.getElementById('blocoResultadosReforcosIA').style.display = 'block';
+            }
+        }
+
+        async function abrirPainelControleManualDivisoes() {
+            let painel = document.getElementById('painelManualDivisoes');
+            let container = document.getElementById('containerListagemManualLigas');
+            container.innerHTML = '<p style="text-align:center;">Calculando classificação da temporada atual...</p>';
+
+            let partidasLocal = await lerLocal("partidas");
+            let partidasTemp = partidasLocal.filter(p => p.temporada_id === temporadaAtualId && p.status === 'concluido');
+
+            let ligas = ["Liga A", "Liga B", "Liga C", "Liga D"];
+            let classificacaoPorLiga = {};
+
+            ligas.forEach(ligaNome => {
+                let idsTimesNoGrupo = new Set();
+                let fasesAlvo = ['1ª Fase Liga', '2ª Fase Liga'];
+                
+                partidasTemp.forEach(p => {
+                    if (fasesAlvo.includes(p.fase) && p.categoria === ligaNome) {
+                        if (p.time_a_id) idsTimesNoGrupo.add(p.time_a_id);
+                        if (p.time_b_id) idsTimesNoGrupo.add(p.time_b_id);
+                    }
+                });
+
+                let timesDaLiga = timesCache.filter(t => idsTimesNoGrupo.has(t.id));
+                if (timesDaLiga.length === 0) timesDaLiga = timesCache.filter(t => (t.divisao || 'Liga A') === ligaNome);
+
+                let mapaLiga = {};
+                timesDaLiga.forEach(t => mapaLiga[t.id] = { id: t.id, nome: t.nome, p: 0, v: 0, e: 0, d: 0, sg: 0, gp: 0 });
+
+                let jogosLiga = partidasTemp.filter(p => (p.fase === '1ª Fase Liga' || p.fase === '2ª Fase Liga') && p.categoria === ligaNome);
+                jogosLiga.forEach(h => {
+                    let tA = mapaLiga[h.time_a_id], tB = mapaLiga[h.time_b_id];
+                    if (tA && tB) {
+                        tA.sg += (h.gols_a - h.gols_b); tB.sg += (h.gols_b - h.gols_a);
+                        tA.gp += h.gols_a; tB.gp += h.gols_b;
+                        if (h.gols_a > h.gols_b) { tA.v++; tA.p += 3; } else if (h.gols_b > h.gols_a) { tB.v++; tB.p += 3; } else { tA.p++; tB.p++; }
+                    }
+                });
+
+                classificacaoPorLiga[ligaNome] = Object.values(mapaLiga).sort((a,b) => b.p - a.p || (b.sg - a.sg) || (b.gp - a.gp) || b.v - a.v);
+            });
+
+            container.innerHTML = '';
+
+            ligas.forEach(ligaNome => {
+                let ranking = classificacaoPorLiga[ligaNome] || [];
+                
+                let blocoLiga = document.createElement('div');
+                blocoLiga.className = 'liga-bloco-manual';
+                blocoLiga.innerHTML = `<h5>${ligaNome} (Tabela Final)</h5>`;
+
+                let totalTimes = ranking.length;
+
+                ranking.forEach((tRank, idx) => {
+                    let posicao = idx + 1;
+                    let sugestao = ligaNome;
+                    let badge = '';
+
+                    if (posicao <= 2 && ligaNome !== "Liga A") {
+                        badge = ' <span style="color:#4caf50; font-size:0.75rem;">(Sobe ⬆️)</span>';
+                        if(ligaNome === "Liga B") sugestao = "Liga A";
+                        if(ligaNome === "Liga C") sugestao = "Liga B";
+                        if(ligaNome === "Liga D") sugestao = "Liga C";
+                    } else if (posicao >= totalTimes - 1 && ligaNome !== "Liga D" && totalTimes >= 4) {
+                        badge = ' <span style="color:#f44336; font-size:0.75rem;">(Cai ⬇️)</span>';
+                        if(ligaNome === "Liga A") sugestao = "Liga B";
+                        if(ligaNome === "Liga B") sugestao = "Liga C";
+                        if(ligaNome === "Liga C") sugestao = "Liga D";
+                    }
+
+                    alterarDivisaoTemporariaTime(tRank.id, sugestao);
+
+                    let linha = document.createElement('div');
+                    linha.className = 'time-linha-manual';
+                    linha.innerHTML = `
+                        <span><b>${posicao}º - ${tRank.nome}</b>${badge}</span>
+                        <select onchange="alterarDivisaoTemporariaTime(${tRank.id}, this.value)" style="padding:4px; font-size:0.75rem; border-radius:4px; background:#333; color:#fff; border:1px solid #555;">
+                            <option value="Liga A" ${sugestao === 'Liga A' ? 'selected' : ''}>Liga A</option>
+                            <option value="Liga B" ${sugestao === 'Liga B' ? 'selected' : ''}>Liga B</option>
+                            <option value="Liga C" ${sugestao === 'Liga C' ? 'selected' : ''}>Liga C</option>
+                            <option value="Liga D" ${sugestao === 'Liga D' ? 'selected' : ''}>Liga D</option>
+                        </select>
+                    `;
+                    blocoLiga.appendChild(linha);
+                });
+                container.appendChild(blocoLiga);
+            });
+
+            painel.style.display = 'block';
+            painel.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function alterarDivisaoTemporariaTime(timeId, novaDivisao) {
+            let t = timesCache.find(x => x.id === timeId);
+            if (t) t.divisaoTemporariaManual = novaDivisao;
+        }
+
+        async function salvarDivisoesManuaisEIniciarTemporada() {
+            if (!confirm("Deseja confirmar essas divisões manuais, congelar o histórico da temporada finalizada e iniciar o novo campeonato?")) return;
+
+            try {
+                let partidasLocal = await lerLocal("partidas");
+                let partidasTemp = partidasLocal.filter(p => p.temporada_id === temporadaAtualId && p.status === 'concluido');
+                
+                let classificacaoCongelada = {};
+                ["Liga A", "Liga B", "Liga C", "Liga D"].forEach(ligaNome => {
+                    let idsTimesNoGrupo = new Set();
+                    let fasesAlvo = ['1ª Fase Liga', '2ª Fase Liga'];
+                    
+                    partidasTemp.forEach(p => {
+                        if (fasesAlvo.includes(p.fase) && p.categoria === ligaNome) {
+                            if (p.time_a_id) idsTimesNoGrupo.add(p.time_a_id);
+                            if (p.time_b_id) idsTimesNoGrupo.add(p.time_b_id);
+                        }
+                    });
+
+                    let timesDaLiga = timesCache.filter(t => idsTimesNoGrupo.has(t.id));
+                    if (timesDaLiga.length === 0) timesDaLiga = timesCache.filter(t => (t.divisao || 'Liga A') === ligaNome);
+
+                    let mapaLiga = {};
+                    timesDaLiga.forEach(t => mapaLiga[t.id] = { id: t.id, nome: t.nome, p: 0, v: 0, e: 0, d: 0, sg: 0, gp: 0, gc: 0, j: 0 });
+
+                    let jogosLiga = partidasTemp.filter(p => (p.fase === '1ª Fase Liga' || p.fase === '2ª Fase Liga') && p.categoria === ligaNome);
+                    jogosLiga.forEach(h => {
+                        let tA = mapaLiga[h.time_a_id], tB = mapaLiga[h.time_b_id];
+                        if (tA && tB) {
+                            tA.j = (tA.j||0)+1; tB.j = (tB.j||0)+1;
+                            tA.sg += (h.gols_a - h.gols_b); tB.sg += (h.gols_b - h.gols_a);
+                            tA.gp += h.gols_a; tA.gc += h.gols_b;
+                            tB.gp += h.gols_b; tB.gc += h.gols_a;
+                            if (h.gols_a > h.gols_b) { tA.v++; tA.p += 3; tB.d++; } else if (h.gols_b > h.gols_a) { tB.v++; tB.p += 3; tA.d++; } else { tA.e++; tA.p++; tB.e++; tB.p++; }
+                        }
+                    });
+                    classificacaoCongelada[ligaNome] = Object.values(mapaLiga).sort((a,b) => b.p - a.p || (b.sg - a.sg) || (b.gp - a.gp) || b.v - a.v);
+                });
+
+                let temporadasLocal = await lerLocal("temporadas");
+                let tempAtiva = temporadasLocal.find(t => t.id === temporadaAtualId);
+                if (tempAtiva) {
+                    tempAtiva.status = 'concluido';
+                    tempAtiva.classificacaoFinalCongelada = classificacaoCongelada;
+                    await salvarLocal("temporadas", tempAtiva);
+                }
+
+                timesCache.forEach(t => {
+                    if (t.divisaoTemporariaManual) {
+                        t.divisao = t.divisaoTemporariaManual;
+                        delete t.divisaoTemporariaManual;
+                    }
+                });
+                await salvarLocal("times", timesCache);
+
+                let maxTempId = temporadasLocal.length > 0 ? Math.max(...temporadasLocal.map(t => t.id)) : temporadaAtualId;
+                let novaTempId = maxTempId + 1;
+                let novaTemp = { id: novaTempId, numero: novaTempId, status: 'em_andamento' };
+                await salvarLocal("temporadas", novaTemp);
+
+                await gerarCalendarioCompletoParaNovaTemporadaLocal(novaTempId);
+
+                localStorage.removeItem(`premios_distribuidos_temp_${temporadaAtualId}`);
+                localStorage.removeItem(`html_premios_temp_${temporadaAtualId}`);
+                localStorage.removeItem(`renovacoes_realizadas_temp_${temporadaAtualId}`);
+                localStorage.removeItem(`html_renovacoes_temp_${temporadaAtualId}`);
+                localStorage.removeItem(`craques_premiados_temp_${temporadaAtualId}`);
+                localStorage.removeItem(`html_jogadores_temp_${temporadaAtualId}`);
+                localStorage.removeItem(`idades_atualizadas_temp_${temporadaAtualId}`);
+                localStorage.removeItem(`html_aposentadorias_temp_${temporadaAtualId}`);
+                localStorage.removeItem(`reforcos_ia_realizados_temp_${temporadaAtualId}`);
+                localStorage.removeItem(`html_reforcos_ia_temp_${temporadaAtualId}`);
+                localStorage.removeItem('partida_ativa_id');
+
+                alert("Nova temporada iniciada com sucesso com base nas divisões manuais! O histórico anterior foi congelado com segurança.");
+                window.location.replace('index.html');
+
+            } catch (erro) {
+                console.error("Erro ao configurar nova temporada manualmente:", erro);
+                alert("Ocorreu um erro ao salvar as divisões: " + erro.message);
+            }
+        }
+
+        async function gerarCalendarioCompletoParaNovaTemporadaLocal(tempId) {
+            let timesAtuais = await lerLocal("times");
+            if (!timesAtuais || timesAtuais.length === 0) return;
+            
+            let ligasObj = { "Liga A": [], "Liga B": [], "Liga C": [], "Liga D": [] };
+            let regioesObj = { "Região 1": [], "Região 2": [], "Região 3": [], "Região 4": [] };
+
+            timesAtuais.forEach(t => {
+                let l = t.divisao || "Liga A";
+                if (ligasObj[l]) ligasObj[l].push(t);
+                else ligasObj["Liga A"].push(t);
+                if (regioesObj[t.regiao]) regioesObj[t.regiao].push(t);
+            });
+
+            let partidasExistentes = await lerLocal("partidas");
+            let ordemContador = partidasExistentes.length > 0 ? Math.max(...partidasExistentes.map(p => p.ordem_fila || 0)) + 1 : 1;
+            let listaJogosParaInserir = [];
+
+            function gerarRodadasComRodadaNome(gruposObj, faseNome) {
+                let rodadasPorRodadaIndex = {};
+                let maxRodadas = 0;
+
+                Object.keys(gruposObj).forEach(grupoNome => {
+                    let listatimes = [...gruposObj[grupoNome]];
+                    if (listatimes.length === 0) return;
+                    if (listatimes.length % 2 !== 0) listatimes.push(null);
+                    let numTimes = listatimes.length;
+                    let rodadas = [], totalRodadas = numTimes - 1, metade = numTimes / 2;
+                    let arr = [...listatimes];
+
+                    for (let r = 0; r < totalRodadas; r++) {
+                        let jogosRodada = [];
+                        for (let i = 0; i < metade; i++) {
+                            let t1 = arr[i], t2 = arr[numTimes - 1 - i];
+                            if (t1 !== null && t2 !== null) {
+                                jogosRodada.push({ fase: faseNome, categoria: grupoNome, rodada_num: r + 1, time_a_id: t1.id, time_b_id: t2.id });
+                            }
+                        }
+                        rodadas.push(jogosRodada);
+                        let ultimo = arr.pop();
+                        arr.splice(1, 0, ultimo);
+                    }
+
+                    if (rodadas.length > maxRodadas) maxRodadas = rodadas.length;
+                    rodadasPorRodadaIndex[grupoNome] = rodadas;
+                });
+
+                let resultadoFase = [];
+                for (let r = 0; r < maxRodadas; r++) {
+                    Object.keys(gruposObj).forEach(gNome => {
+                        if (rodadasPorRodadaIndex[gNome]?.[r]) {
+                            rodadasPorRodadaIndex[gNome][r].forEach(jogo => resultadoFase.push(jogo));
+                        }
+                    });
+                }
+                return resultadoFase;
+            }
+
+            let f1Liga = gerarRodadasComRodadaNome(ligasObj, '1ª Fase Liga');
+            f1Liga.forEach(j => listaJogosParaInserir.push({ ...j, id: ordemContador, temporada_id: tempId, status: 'pendente', ordem_fila: ordemContador++ }));
+
+            let f1Reg = gerarRodadasComRodadaNome(regioesObj, '1ª Fase Regional');
+            f1Reg.forEach(j => listaJogosParaInserir.push({ ...j, id: ordemContador, temporada_id: tempId, status: 'pendente', ordem_fila: ordemContador++ }));
+
+            let f2Liga = gerarRodadasComRodadaNome(ligasObj, '2ª Fase Liga');
+            f2Liga.forEach(j => listaJogosParaInserir.push({ ...j, id: ordemContador, temporada_id: tempId, status: 'pendente', ordem_fila: ordemContador++ }));
+
+            let f2Reg = gerarRodadasComRodadaNome(regioesObj, '2ª Fase Regional');
+            f2Reg.forEach(j => listaJogosParaInserir.push({ ...j, id: ordemContador, temporada_id: tempId, status: 'pendente', ordem_fila: ordemContador++ }));
+
+            for(let o=0; o<8; o++) listaJogosParaInserir.push({ id: ordemContador, fase: 'Mundial', categoria: 'Oitavas de Final', rodada_num: 1, time_a_id: null, time_b_id: null, temporada_id: tempId, status: 'pendente', ordem_fila: ordemContador++ });
+            for(let q=0; q<4; q++) listaJogosParaInserir.push({ id: ordemContador, fase: 'Mundial', categoria: 'Quartas de Final', rodada_num: 2, time_a_id: null, time_b_id: null, temporada_id: tempId, status: 'pendente', ordem_fila: ordemContador++ });
+            for(let s=0; s<2; s++) listaJogosParaInserir.push({ id: ordemContador, fase: 'Mundial', categoria: 'Semifinal', rodada_num: 3, time_a_id: null, time_b_id: null, temporada_id: tempId, status: 'pendente', ordem_fila: ordemContador++ });
+            listaJogosParaInserir.push({ id: ordemContador, fase: 'Mundial', categoria: 'Final', rodada_num: 4, time_a_id: null, time_b_id: null, temporada_id: tempId, status: 'pendente', ordem_fila: ordemContador++ });
+
+            await salvarLocal("partidas", listaJogosParaInserir);
+        }
+
+        async function carregarResultadosSalvosNaTela(abrirAutomatico = true) {
+            let htmlSalvo = localStorage.getItem(`html_premios_temp_${temporadaAtualId}`);
+            if (htmlSalvo) {
+                document.getElementById('conteudoPremiacoesLista').innerHTML = htmlSalvo;
+                if (abrirAutomatico) document.getElementById('blocoResultadosPremiacao').style.display = 'block';
+            }
+        }
+
+        async function carregarRenovacoesSalvasNaTela(abrirAutomatico = true) {
+            let htmlSalvo = localStorage.getItem(`html_renovacoes_temp_${temporadaAtualId}`);
+            if (htmlSalvo) {
+                document.getElementById('conteudoRenovacoesLista').innerHTML = htmlSalvo;
+                if (abrirAutomatico) document.getElementById('blocoResultadosRenovacoes').style.display = 'block';
+            }
+        }
+
+        async function carregarJogadoresSalvosNaTela(abrirAutomatico = true) {
+            let htmlSalvo = localStorage.getItem(`html_jogadores_temp_${temporadaAtualId}`);
+            if (htmlSalvo) {
+                document.getElementById('conteudoJogadoresLista').innerHTML = htmlSalvo;
+                if (abrirAutomatico) document.getElementById('blocoResultadosJogadores').style.display = 'block';
+            }
+        }
+
+        async function carregarAposentadoriasSalvosNaTela(abrirAutomatico = true) {
+            let htmlSalvo = localStorage.getItem(`html_aposentadorias_temp_${temporadaAtualId}`);
+            if (htmlSalvo) {
+                document.getElementById('conteudoAposentadoriasLista').innerHTML = htmlSalvo;
+                if (abrirAutomatico) document.getElementById('blocoResultadosAposentadorias').style.display = 'block';
+            }
+        }
+
+        async function carregarReforcosIASalvosNaTela(abrirAutomatico = true) {
+            let htmlSalvo = localStorage.getItem(`html_reforcos_ia_temp_${temporadaAtualId}`);
+            if (htmlSalvo) {
+                document.getElementById('conteudoReforcosIALista').innerHTML = htmlSalvo;
+                if (abrirAutomatico) document.getElementById('blocoResultadosReforcosIA').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>

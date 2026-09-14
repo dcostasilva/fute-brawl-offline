@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habilidades - Fute-Brawl</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 20px auto 90px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .secao-posicao {
+            margin-bottom: 25px;
+        }
+        .secao-posicao h3 {
+            color: #1565c0;
+            border-bottom: 2px solid #e3f2fd;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        .lista-habilidades {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .item-habilidade {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+        .item-habilidade:hover {
+            background: #e9ecef;
+        }
+        .habilidade-titulo {
+            font-weight: bold;
+            color: #333;
+        }
+        .vinculo-info {
+            font-size: 0.75rem;
+            color: #2e7d32;
+            background: #e8f5e9;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .tela-detalhe {
+            display: none;
+        }
+        .detalhe-card {
+            background: #fdfdfd;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .btn-voltar-lista {
+            background-color: #90caf9;
+            color: #fff;
+            border: none;
+            padding: 8px 14px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+        .btn-acao-hab {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .valor-editavel {
+            background-color: #fff8e1;
+            color: #f57c00;
+            border: 1px dashed #ffb300;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .valor-editavel:hover {
+            background-color: #ffecb3;
+        }
+        .msg-sucesso {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-bottom: 12px;
+            display: none;
+            text-align: center;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 450px;
+            padding: 20px;
+            border-radius: 12px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        .jogador-opcao {
+            padding: 10px;
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-vincular-acao {
+            background-color: #2e7d32;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .btn-desvincular-acao {
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .badge-rank {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: bold;
+            color: white;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Fute-Brawl - Habilidades</h1>
+    </header>
+
+    <main class="container">
+        <!-- VISÃO DE LISTAGEM -->
+        <div id="visaoLista">
+            <div class="header-top">
+                <h2>Gerenciador de Habilidades</h2>
+            </div>
+            <p style="font-size: 0.85rem; color: #666; margin-bottom: 20px;">Clique em qualquer habilidade para ver os detalhes e gerenciar vínculos (Trava de exclusividade por habilidade ativa).</p>
+            <div id="listaHabilidadesContainer">Carregando habilidades...</div>
+        </div>
+
+        <!-- VISÃO DE TELA DETALHADA DA HABILIDADE -->
+        <div id="visaoDetalhe" class="tela-detalhe">
+            <button class="btn-voltar-lista" onclick="voltarParaLista()">⬅️ Voltar para Lista</button>
+            <div class="msg-sucesso" id="msgSucessoHab">✅ Valor atualizado corretamente com sucesso!</div>
+            <div class="detalhe-card" id="conteudoDetalheHabilidade">
+                <!-- Preenchido via script -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de Vínculo de Jogador com Filtros Avançados e Atributos Formatados -->
+    <div class="modal-overlay" id="modalVinculo">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="tituloModalVinculo">Vincular Habilidade</h3>
+                <button class="modal-close" onclick="fecharModalVinculo()">✕</button>
+            </div>
+            
+            <!-- Filtros Avançados por Time e Posição -->
+            <div style="display:flex; gap:6px; margin-bottom:12px;">
+                <div style="flex:1;">
+                    <label style="font-size:0.75rem; font-weight:bold; color:#555;">Filtrar Posição:</label>
+                    <select id="modalFiltroPosicao" onchange="renderizarOpcoesJogadoresModal()" style="width:100%; padding:6px; font-size:0.8rem; border-radius:6px; border:1px solid #90caf9;">
+                        <option value="">Todas</option>
+                        <option value="Goleiro">Goleiro</option>
+                        <option value="Zagueiro">Zagueiro</option>
+                        <option value="Meia defensivo">Meia Defensivo</option>
+                        <option value="Meia ofensivo">Meia Ofensivo</option>
+                        <option value="Atacante">Atacante</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label style="font-size:0.75rem; font-weight:bold; color:#555;">Filtrar Time:</label>
+                    <select id="modalFiltroTime" onchange="renderizarOpcoesJogadoresModal()" style="width:100%; padding:6px; font-size:0.8rem; border-radius:6px; border:1px solid #90caf9;">
+                        <option value="">Todos</option>
+                        <option value="sem_time">Agentes Livres</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="containerOpcoesJogadores" style="max-height: 280px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <nav class="nav-bar">
+        <a href="times.html" class="nav-btn" onclick="mudarTela(event, 'times.html')"><span class="icon">🛡️</span> Times</a>
+        <a href="index.html" class="nav-btn" onclick="mudarTela(event, 'index.html')"><span class="icon">🏠</span> Jogos</a>
+        <a href="rankings.html" class="nav-btn" onclick="mudarTela(event, 'rankings.html')"><span class="icon">🏅</span> Rankings</a>
+    </nav>
+
+    <script>
+        const DB_NAME = "FuteBrawlOfflineDB";
+        const DB_VERSION = 2;
+
+        const habilidadesPadrao = [
+            { id: "at_1", posicao: "Atacantes", nome: "Flash", descCurta: "+4 de bônus na velocidade.", descDetalhada: "Concede +4 fixos em velocidade e soma diretamente ao cálculo de ataque.", editavelCodigo: false },
+            { id: "at_2", posicao: "Atacantes", nome: "Impacto", descCurta: "+4 de precisão (50% chance de chutar antes ou passar a zaga).", descDetalhada: "Concede +4 em precisão para o cálculo de finalização, com 50% de chance de chutar antes de passar a zaga.", editavelCodigo: false },
+            { id: "at_3", posicao: "Atacantes", nome: "Olhos do Imperador", descCurta: "Anula 100% o reflexo do goleiro adversário.", descDetalhada: "Anula completamente o reflexo do goleiro rival na finalização, fazendo-o defender apenas com a base.", editavelCodigo: false },
+            { id: "at_5", posicao: "Atacantes", nome: "Jogada Coringa", descCurta: "Reduz todos os atributos em campo a 0, decidindo apenas na sorte.", descDetalhada: "Todos os jogadores em campo (inclusive usuário) têm velocidade, precisão, assistência, marcação e reflexo reduzidos a 0, valendo apenas os valores rolados.", editavelCodigo: true },
+            { id: "mo_3", posicao: "MO", nome: "Garçom Impecável", descCurta: "Eleva o dado de chute do colega assistido para D30.", descDetalhada: "Quando atua como assistente, eleva o valor sorteado de chute/ataque do companheiro para D30.", editavelCodigo: false },
+            { id: "mo_4", posicao: "MO", nome: "Clone", descCurta: "Copia a habilidade do adversário em campo.", descDetalhada: "Copia temporariamente a habilidade especial de um Atacante ou Meia Ofensivo adversário em campo, informando na tela e na narração.", editavelCodigo: false },
+            { id: "md_2", posicao: "MD", nome: "Desarme Coordenado", descCurta: "Muda o dado de defesa de todos os aliados para D22 (exceto exceções maiores).", descDetalhada: "Altera o dado sorteado de defesa de todos os aliados em campo para D22, exceto aqueles com habilidades de dados superiores como D30.", editavelCodigo: false },
+            { id: "md_5", posicao: "MD", nome: "Dobra de Valor", descCurta: "Utiliza dado de D30 na defesa para si e MO aliado.", descDetalhada: "Eleva o patamar de defesa para D30 tanto para o próprio MD quanto para o MO aliado.", editavelCodigo: false },
+            { id: "za_1", posicao: "Zagueiros", nome: "Muralha", descCurta: "+4 de marcação para si.", descDetalhada: "Concede bônus fixo de +4 em marcação exclusivamente para o usuário.", editavelCodigo: false },
+            { id: "za_2", posicao: "Zagueiros", nome: "Barreira Infernal", descCurta: "Obriga a dupla rival a vencer a zaga duas vezes.", descDetalhada: "Exige que os atacantes adversários vençam dois testes seguidos da zaga para finalizar.", editavelCodigo: true },
+            { id: "za_4", posicao: "Zagueiros", nome: "Devorador de Às", descCurta: "+1 de marcação a cada desarme bem-sucedido.", descDetalhada: "Ganha acumulativamente +1 de marcação a cada desarme limpo executado na partida.", editavelCodigo: false },
+            { id: "za_5", posicao: "Zagueiros", nome: "Full Counter", descCurta: "Anula as habilidades de todos os adversários na partida inteira.", descDetalhada: "Neutraliza e desativa o uso de qualquer habilidade especial de todos os adversários em campo durante toda a partida.", editavelCodigo: true },
+            { id: "go_1", posicao: "Goleiros", nome: "Muro de Ferro", descCurta: "Utiliza dado de D30 em sua defesa.", descDetalhada: "Altera o teto e o valor de rolagem da defesa do goleiro para um dado de D30.", editavelCodigo: false },
+            { id: "go_2", posicao: "Goleiros", nome: "Instinto Superior", descCurta: "+4 de bônus no reflexo.", descDetalhada: "Concede um bônus fixo de +4 direto no atributo de reflexo do goleiro.", editavelCodigo: false }
+        ];
+
+        let habilidadeSelecionadaParaVinculo = null;
+        let jogadoresCacheModal = [];
+        let timesCacheMapModal = {};
+
+        function abrirBancoLocal() {
+            return new Promise((resolve, reject) => {
+                let request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                request.onupgradeneeded = (event) => {
+                    let db = event.target.result;
+                    if (!db.objectStoreNames.contains("times")) db.createObjectStore("times", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("jogadores")) db.createObjectStore("jogadores", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("habilidades_custom")) db.createObjectStore("habilidades_custom", { keyPath: "id" });
+                };
+            });
+        }
+
+        async function lerLocal(storeName) {
+            try {
+                let db = await abrirBancoLocal();
+                return new Promise((resolve, reject) => {
+                    let transaction = db.transaction(storeName, "readonly");
+                    let store = transaction.objectStore(storeName);
+                    let request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => resolve([]);
+                });
+            } catch (e) {
+                return [];
+            }
+        }
+
+        async function salvarLocal(storeName, dados) {
+            let db = await abrirBancoLocal();
+            return new Promise((resolve, reject) => {
+                let transaction = db.transaction(storeName, "readwrite");
+                let store = transaction.objectStore(storeName);
+                if (Array.isArray(dados)) {
+                    dados.forEach(item => store.put(item));
+                } else {
+                    store.put(dados);
+                }
+                transaction.oncomplete = () => resolve(true);
+                transaction.onerror = () => reject(transaction.error);
+            });
+        }
+
+        const normalizar = (str) => (str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/-/g, ' ').trim();
+
+        function calcularRankJogador(j) {
+            let posNorm = normalizar(j.posicao);
+            let valorAtributo = 0;
+
+            if (posNorm.includes('goleiro')) {
+                valorAtributo = j.reflexo || 0;
+            } 
+            else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
+                valorAtributo = j.marcacao || 0;
+            } 
+            else {
+                let vel = j.velocidade || 0;
+                let prec = j.precisao || 0;
+                let assis = j.assistencia || 0;
+                valorAtributo = Math.max(vel, prec, assis);
+            }
+
+            if (valorAtributo <= 0) return { nome: 'Rank-E', cor: '#1976d2' };
+            if (valorAtributo === 1) return { nome: 'Rank-D', cor: '#388e3c' };
+            if (valorAtributo === 2) return { nome: 'Rank-C', cor: '#fbc02d' };
+            if (valorAtributo === 3) return { nome: 'Rank-B', cor: '#f57c00' };
+            if (valorAtributo === 4) return { nome: 'Rank-A', cor: '#d32f2f' };
+            if (valorAtributo === 5) return { nome: 'Rank-S', cor: '#7b1fa2' };
+            return { nome: 'Rank nacional', cor: '#000000' };
+        }
+
+        function formatarAtributosPorFuncao(j) {
+            let posNorm = normalizar(j.posicao);
+            if (posNorm.includes('goleiro')) {
+                return `Reflexo: ${j.reflexo || 0}`;
+            } else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
+                return `Marcação: ${j.marcacao || 0}`;
+            } else {
+                return `Vel: ${j.velocidade || 0} | Prec: ${j.precisao || 0} | Assis: ${j.assistencia || 0}`;
+            }
+        }
+
+        function formatarValoresEditaveis(texto, habId, editavel) {
+            return texto.replace(/([+-]?\d+%?)/g, (match) => {
+                if (editavel) {
+                    return `<span class="valor-editavel" onclick="editarValorEspecifico('${habId}', '${match}')" title="Clique para editar este valor">${match}</span>`;
+                }
+                return match;
+            });
+        }
+
+        async function carregarTela() {
+            let container = document.getElementById('listaHabilidadesContainer');
+            container.innerHTML = '';
+
+            let customizadas = await lerLocal("habilidades_custom");
+            let jogadores = await lerLocal("jogadores");
+            let times = await lerLocal("times");
+
+            let mapaTimes = {};
+            times.forEach(t => mapaTimes[t.id] = t.nome);
+
+            let mapaHabilidadesSalvas = {};
+            customizadas.forEach(c => mapaHabilidadesSalvas[c.id] = c);
+
+            let posicoesOrdem = ["Atacantes", "MO", "MD", "Zagueiros", "Goleiros"];
+
+            posicoesOrdem.forEach(pos => {
+                let habsDaPosicao = habilidadesPadrao.filter(h => h.posicao === pos);
+                if (habsDaPosicao.length === 0) return;
+                
+                let htmlSecao = `<div class="secao-posicao">
+                    <h3>Habilidades de ${pos}</h3>
+                    <ul class="lista-habilidades">`;
+
+                habsDaPosicao.forEach(h => {
+                    let baseObj = habilidadesPadrao.find(x => x.id === h.id);
+                    let dadosAtuais = mapaHabilidadesSalvas[h.id] || baseObj;
+                    
+                    let jogadorVinculado = jogadores.find(j => j.habilidade_id === h.id);
+                    let infoVinculo = "";
+                    if (jogadorVinculado) {
+                        let nomeTime = mapaTimes[jogadorVinculado.time_id] || "Sem Time";
+                        infoVinculo = `<span class="vinculo-info">🔗 ${jogadorVinculado.nome} (${nomeTime})</span>`;
+                    } else {
+                        infoVinculo = `<span class="vinculo-info" style="background:#f5f5f5; color:#777;">Sem Vínculo</span>`;
+                    }
+
+                    htmlSecao += `
+                        <li class="item-habilidade" onclick="abrirDetalheHabilidade('${h.id}')">
+                            <div>
+                                <span class="habilidade-titulo">${dadosAtuais.nome}</span>
+                                <p style="font-size:0.8rem; color:#666; margin:4px 0 0 0;">${dadosAtuais.descCurta}</p>
+                            </div>
+                            <div>${infoVinculo}</div>
+                        </li>`;
+                });
+
+                htmlSecao += `</ul></div>`;
+                container.innerHTML += htmlSecao;
+            });
+        }
+
+        async function abrirDetalheHabilidade(id) {
+            let hOriginal = habilidadesPadrao.find(h => h.id === id);
+            let customizadas = await lerLocal("habilidades_custom");
+            let dadosCustom = customizadas.find(c => c.id === id) || {};
+
+            let descCurtaAtual = dadosCustom.descCurta || hOriginal.descCurta;
+            let descDetalhadaAtual = dadosCustom.descDetalhada || hOriginal.descDetalhada;
+            let editavel = !hOriginal.editavelCodigo;
+
+            let curtaFormatada = formatarValoresEditaveis(descCurtaAtual, id, editavel);
+            let detalhadaFormatada = formatarValoresEditaveis(descDetalhadaAtual, id, editavel);
+
+            let jogadores = await lerLocal("jogadores");
+            let times = await lerLocal("times");
+            let mapaTimes = {};
+            times.forEach(t => mapaTimes[t.id] = t.nome);
+            let jogadorVinculado = jogadores.find(j => j.habilidade_id === id);
+            let infoVinculoTexto = jogadorVinculado ? `🔗 Vinculado a: <strong>${jogadorVinculado.nome}</strong> (${mapaTimes[jogadorVinculado.time_id] || 'Sem Time'})` : "Sem Vínculo atual";
+
+            let htmlDetalhe = `
+                <h2 style="color:#1565c0; margin-bottom:5px;">${hOriginal.nome} (${hOriginal.posicao})</h2>
+                <p style="font-size:0.85rem; color:#2e7d32; margin-bottom:15px;">${infoVinculoTexto}</p>
+                
+                <div style="background:#f1f8e9; padding:10px; border-radius:6px; margin-bottom:10px;">
+                    <strong>Resumo Curto:</strong>
+                    <p style="margin:5px 0 0 0; color:#333;">${curtaFormatada}</p>
+                </div>
+
+                <div style="background:#e3f2fd; padding:10px; border-radius:6px; margin-bottom:15px;">
+                    <strong>Descrição Detalhada:</strong>
+                    <p style="margin:5px 0 0 0; color:#333;">${detalhadaFormatada}</p>
+                </div>
+
+                <div style="margin-top:20px; display:flex; gap:10px; flex-wrap:wrap;">
+                    <button class="btn-acao-hab" onclick="abrirModalVinculo('${id}')">Gerenciar Vínculo</button>
+                </div>
+            `;
+
+            document.getElementById('conteudoDetalheHabilidade').innerHTML = htmlDetalhe;
+            document.getElementById('msgSucessoHab').style.display = 'none';
+            document.getElementById('visaoLista').style.display = 'none';
+            document.getElementById('visaoDetalhe').style.display = 'block';
+        }
+
+        async function editarValorEspecifico(id, valorAntigo) {
+            event.stopPropagation();
+            let hOriginal = habilidadesPadrao.find(h => h.id === id);
+            if (hOriginal.editavelCodigo) {
+                alert("Esta habilidade é editável somente no código.");
+                return;
+            }
+
+            let novoValor = prompt(`Alterar valor (${valorAntigo}):`, valorAntigo);
+            if (novoValor === null || novoValor.trim() === "") return;
+
+            let customizadas = await lerLocal("habilidades_custom");
+            let dadosCustom = customizadas.find(c => c.id === id) || {
+                id: id,
+                posicao: hOriginal.posicao,
+                nome: hOriginal.nome,
+                descCurta: hOriginal.descCurta,
+                descDetalhada: hOriginal.descDetalhada
+            };
+
+            if (!dadosCustom.descCurta) dadosCustom.descCurta = hOriginal.descCurta;
+            if (!dadosCustom.descDetalhada) dadosCustom.descDetalhada = hOriginal.descDetalhada;
+
+            let regex = new RegExp(valorAntigo.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g');
+            dadosCustom.descCurta = dadosCustom.descCurta.replace(regex, novoValor.trim());
+            dadosCustom.descDetalhada = dadosCustom.descDetalhada.replace(regex, novoValor.trim());
+
+            await salvarLocal("habilidades_custom", dadosCustom);
+
+            let msgBox = document.getElementById('msgSucessoHab');
+            msgBox.style.display = 'block';
+            setTimeout(() => { msgBox.style.display = 'none'; }, 3000);
+
+            await abrirDetalheHabilidade(id);
+        }
+
+        function voltarParaLista() {
+            document.getElementById('visaoDetalhe').style.display = 'none';
+            document.getElementById('visaoLista').style.display = 'block';
+            carregarTela();
+        }
+
+        async function abrirModalVinculo(habId) {
+            habilidadeSelecionadaParaVinculo = habId;
+            let hObj = habilidadesPadrao.find(x => x.id === habId);
+            document.getElementById('tituloModalVinculo').innerText = `Vincular: ${hObj.nome}`;
+
+            document.getElementById('modalFiltroPosicao').value = "";
+            document.getElementById('modalFiltroTime').value = "";
+
+            let times = await lerLocal("times");
+            times.sort((a,b) => a.nome.localeCompare(b.nome));
+            let selTime = document.getElementById('modalFiltroTime');
+            selTime.innerHTML = `
+                <option value="">Todos</option>
+                <option value="sem_time">Agentes Livres</option>
+            `;
+            times.forEach(t => selTime.innerHTML += `<option value="${t.id}">${t.nome}</option>`);
+
+            jogadoresCacheModal = await lerLocal("jogadores");
+            timesCacheMapModal = {};
+            times.forEach(t => timesCacheMapModal[String(t.id)] = t.nome);
+
+            renderizarOpcoesJogadoresModal();
+            document.getElementById('modalVinculo').style.display = 'flex';
+        }
+
+        function renderizarOpcoesJogadoresModal() {
+            let containerJogadores = document.getElementById('containerOpcoesJogadores');
+            let filtroPos = document.getElementById('modalFiltroPosicao').value;
+            let filtroTime = document.getElementById('modalFiltroTime').value;
+
+            let habId = habilidadeSelecionadaParaVinculo;
+            let hObj = habilidadesPadrao.find(x => x.id === habId);
+            let termoPosPadrao = hObj.posicao.toLowerCase();
+
+            let atletasFiltrados = jogadoresCacheModal.filter(j => {
+                let p = (j.posicao || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                
+                // Filtro por posição do dropdown ou compatibilidade da habilidade
+                let matchPos = true;
+                if (filtroPos) {
+                    matchPos = p.includes(normalizar(filtroPos));
+                } else {
+                    if (termoPosPadrao.includes('atacante')) matchPos = p.includes('atacante');
+                    else if (termoPosPadrao === 'mo' || termoPosPadrao.includes('ofensiv')) matchPos = p.includes('meia ofensivo') || p.includes('mo') || (p.includes('meia') && !p.includes('defensiv'));
+                    else if (termoPosPadrao === 'md' || termoPosPadrao.includes('defensiv')) matchPos = p.includes('meia defensivo') || p.includes('md') || (p.includes('meia') && p.includes('defensiv'));
+                    else if (termoPosPadrao.includes('zagueiro')) matchPos = p.includes('zagueiro');
+                    else if (termoPosPadrao.includes('goleiro')) matchPos = p.includes('goleiro');
+                }
+
+                let matchTime = true;
+                if (filtroTime === 'sem_time') {
+                    matchTime = !j.time_id || j.time_id === '' || j.time_id === null;
+                } else if (filtroTime) {
+                    matchTime = j.time_id && String(j.time_id) === filtroTime;
+                }
+
+                return matchPos && matchTime;
+            });
+
+            atletasFiltrados.sort((a, b) => a.nome.localeCompare(b.nome));
+
+            if (atletasFiltrados.length === 0) {
+                containerJogadores.innerHTML = '<p style="color:#666; text-align:center; font-size:0.85rem; padding:15px;">Nenhum atleta encontrado com os filtros selecionados.</p>';
+                return;
+            }
+
+            containerJogadores.innerHTML = '';
+            atletasFiltrados.forEach(j => {
+                let nomeTime = j.time_id ? (timesCacheMapModal[String(j.time_id)] || "Outro Time") : "Agente Livre";
+                let rank = calcularRankJogador(j);
+                let atributosStr = formatarAtributosPorFuncao(j);
+                let jaPossuiEstaHab = j.habilidade_id === habId;
+
+                let btnTexto = jaPossuiEstaHab ? "Desvincular" : "Vincular";
+                let btnClasse = jaPossuiEstaHab ? "btn-desvincular-acao" : "btn-vincular-acao";
+
+                containerJogadores.innerHTML += `
+                    <div class="jogador-opcao">
+                        <div style="flex-grow:1; overflow:hidden;">
+                            <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
+                                <strong style="font-size:0.9rem;">${j.nome}</strong>
+                                <span class="badge-rank" style="background-color: ${rank.cor};">${rank.nome}</span>
+                            </div>
+                            <div style="font-size:0.75rem; color:#555;">
+                                Time: <b>${nomeTime}</b> | ${atributosStr}
+                            </div>
+                        </div>
+                        <button class="${btnClasse}" onclick="alternarVinculoJogador(${j.id}, ${jaPossuiEstaHab})">${btnTexto}</button>
+                    </div>
+                `;
+            });
+        }
+
+        function fecharModalVinculo() {
+            document.getElementById('modalVinculo').style.display = 'none';
+            habilidadeSelecionadaParaVinculo = null;
+        }
+
+        // Trava de Duplicidade: Garante exclusividade da habilidade ativa e avisa se foi removida de outro atleta
+        async function alternarVinculoJogador(jogadorId, jaPossui) {
+            let jogadores = await lerLocal("jogadores");
+            let jogador = jogadores.find(j => j.id === jogadorId);
+            if (!jogador) return;
+
+            if (jaPossui) {
+                if (confirm(`Deseja realmente desvincular a habilidade de ${jogador.nome}?`)) {
+                    jogador.habilidade_id = null;
+                    await salvarLocal("jogadores", jogador);
+                    alert("✅ Habilidade desvinculada com sucesso!");
+                } else {
+                    return;
+                }
+            } else {
+                // Trava de Duplicidade estrita: remove esta habilidade de qualquer outro jogador que a possuía no plantel
+                let atletaAnterior = jogadores.find(j => j.habilidade_id === habilidadeSelecionadaParaVinculo);
+                if (atletaAnterior) {
+                    atletaAnterior.habilidade_id = null;
+                    await salvarLocal("jogadores", atletaAnterior);
+                }
+
+                jogador.habilidade_id = habilidadeSelecionadaParaVinculo;
+                await salvarLocal("jogadores", jogador);
+
+                if (atletaAnterior && atletaAnterior.id !== jogador.id) {
+                    alert(`✅ Habilidade vinculada a ${jogador.nome}!\n(Nota: Ela foi removida do anterior portador, ${atletaAnterior.nome}, para manter a exclusividade).`);
+                } else {
+                    alert(`✅ Habilidade vinculada com sucesso a ${jogador.nome}!`);
+                }
+            }
+
+            jogadoresCacheModal = await lerLocal("jogadores");
+            renderizarOpcoesJogadoresModal();
+            carregarTela();
+            
+            // Atualiza também na tela de detalhes se estiver aberta
+            abrirDetalheHabilidade(habilidadeSelecionadaParaVinculo);
+        }
+
+        function mudarTela(event, destino) {
+            event.preventDefault();
+            if (window.location.pathname.includes(destino)) return;
+            document.body.style.opacity = '0';
+            setTimeout(() => { window.location.href = destino; }, 150);
+        }
+
+        window.onload = carregarTela;
+    </script>
+</body>
+</html>

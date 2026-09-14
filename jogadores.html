@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogadores - Fute-Brawl (Offline)</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .painel-conteudo {
+            display: none;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 420px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-top: 20px;
+            text-align: left;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .painel-conteudo h2 {
+            color: #1565c0;
+            font-size: 1.4rem;
+            margin-top: 0;
+            text-align: center;
+        }
+        .input-group {
+            margin-bottom: 12px;
+        }
+        .input-group label {
+            display: block;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+        .input-group input, .input-group select, .input-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #90caf9;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 1rem;
+            background-color: #fff;
+        }
+        .attr-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f0f7ff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            border: 1px solid #d0e8ff;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #1565c0;
+        }
+        .attr-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        .attr-btn {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-acao {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+        .btn-voltar {
+            background-color: #90caf9;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .btn-posicao-categoria {
+            background-color: #e3f2fd;
+            color: #0d47a1;
+            border: 1px solid #90caf9;
+            padding: 10px;
+            width: 100%;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            cursor: pointer;
+            margin-bottom: 8px;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-posicao-categoria:hover {
+            background-color: #bbdefb;
+        }
+        .lista-jogadores {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 320px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+        .jogador-card {
+            display: flex;
+            align-items: center;
+            background: #f0f7ff;
+            padding: 10px 12px;
+            border-radius: 8px;
+            gap: 12px;
+            cursor: pointer;
+            border: 1px solid #d0e8ff;
+            user-select: none;
+        }
+        .jogador-card.selecionado-massa {
+            background: #e3f2fd;
+            border-color: #1565c0;
+        }
+        .jogador-info {
+            flex-grow: 1;
+            overflow: hidden;
+        }
+        .jogador-topo-linha {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            margin-bottom: 2px;
+        }
+        .jogador-nome {
+            font-weight: bold;
+            color: #1565c0;
+            font-size: 1.05rem;
+            word-break: break-word;
+        }
+        .badge-rank {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: white;
+            border: 1px solid rgba(0,0,0,0.1);
+            white-space: nowrap;
+        }
+        .time-info-linha {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 2px 0 0 0;
+            font-size: 0.85rem;
+            color: #444;
+        }
+        .btn-editar {
+            background-color: #ff9800;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-excluir {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .perfil-secao {
+            background: #f0f7ff;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .perfil-secao h3 {
+            margin: 0 0 5px 0;
+            font-size: 0.95rem;
+            color: #1565c0;
+        }
+        .time-escudo {
+            width: 65px;
+            height: 65px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid #000000;
+            background-color: #ccc;
+            flex-shrink: 0;
+        }
+        .tooltip-balao {
+            position: absolute;
+            background: #333;
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            z-index: 9999;
+            max-width: 220px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .estrela-habilidade {
+            cursor: pointer;
+            font-size: 0.9rem;
+            user-select: none;
+        }
+        .historico-temporada-card {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 6px;
+            cursor: pointer;
+        }
+        .historico-temporada-card:hover {
+            background: #bbdefb;
+        }
+        .barra-selecao-massa {
+            display: none;
+            background: #1e1e1e;
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Jogadores (Offline)</h1>
+    </header>
+
+    <main class="menu-container" id="menuJogadores">
+        <a href="#" class="btn" onclick="abrirVisualizar()">Visualizar jogadores</a>
+        <a href="#" class="btn" onclick="abrirCriar()">Criar novo jogador</a>
+        <a href="#" class="btn" onclick="abrirCriarEmMassa()" style="background-color: #ff9800;">Criar jogadores em massa</a>
+    </main>
+
+    <!-- 1. PAINEL VISUALIZAR JOGADORES -->
+    <div class="painel-conteudo" id="painelVisualizar">
+        <h2>Visualizar Jogadores</h2>
+        
+        <div id="menuPosicoesVisualizar">
+            <div style="display:flex; gap:6px; margin-bottom:10px;">
+                <div style="flex:1;">
+                    <label style="font-size:0.75rem; font-weight:bold; color:#555;">Filtrar Rank:</label>
+                    <select id="filtroRankVisualizar" onchange="aplicarSubfiltrosVisualizar()" style="width:100%; padding:6px; font-size:0.8rem; border-radius:6px; border:1px solid #90caf9;">
+                        <option value="">Todos os Ranks</option>
+                        <option value="Rank-E">Rank-E</option>
+                        <option value="Rank-D">Rank-D</option>
+                        <option value="Rank-C">Rank-C</option>
+                        <option value="Rank-B">Rank-B</option>
+                        <option value="Rank-A">Rank-A</option>
+                        <option value="Rank-S">Rank-S</option>
+                        <option value="Rank nacional">Rank nacional</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label style="font-size:0.75rem; font-weight:bold; color:#555;">Filtrar Time:</label>
+                    <select id="filtroTimeVisualizar" onchange="aplicarSubfiltrosVisualizar()" style="width:100%; padding:6px; font-size:0.8rem; border-radius:6px; border:1px solid #90caf9;">
+                        <option value="">Todos os Times</option>
+                        <option value="sem_time">Sem Time (Agentes Livres)</option>
+                    </select>
+                </div>
+            </div>
+
+            <p style="text-align:center; color:#666; font-size:0.9rem; margin-bottom:10px;">Selecione uma posição para listar os atletas:</p>
+            <button class="btn-posicao-categoria" onclick="filtrarVisualizarPorPosicao('Goleiro')">🧤 Goleiro <span>➔</span></button>
+            <button class="btn-posicao-categoria" onclick="filtrarVisualizarPorPosicao('Zagueiro')">🛡️ Zagueiro <span>➔</span></button>
+            <button class="btn-posicao-categoria" onclick="filtrarVisualizarPorPosicao('Meia defensivo')">🛑 Meia Defensivo <span>➔</span></button>
+            <button class="btn-posicao-categoria" onclick="filtrarVisualizarPorPosicao('Meia ofensivo')">⚡ Meia Ofensivo <span>➔</span></button>
+            <button class="btn-posicao-categoria" onclick="filtrarVisualizarPorPosicao('Atacante')">⚽ Atacante <span>➔</span></button>
+        </div>
+
+        <div id="areaListaVisualizar" style="display:none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <button style="background:none; border:none; color:#1565c0; font-weight:bold; cursor:pointer;" onclick="voltarCategoriasVisualizar()">⬅️ Voltar às Categorias</button>
+                <button style="background: #e0e0e0; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; cursor: pointer;" onclick="ativarModoSelecaoMassaToggle()">Modo Seleção</button>
+            </div>
+
+            <div class="barra-selecao-massa" id="barraSelecaoMassa">
+                <span id="contadorSelecionadosMassa">0 selecionados</span>
+                <div style="display:flex; gap:6px;">
+                    <button style="background:#f44336; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-weight:bold; cursor:pointer;" onclick="excluirSelecionadosMassa()">Excluir</button>
+                    <button style="background:#666; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-weight:bold; cursor:pointer;" onclick="cancelarSelecaoMassa()">Cancelar</button>
+                </div>
+            </div>
+
+            <h3 id="tituloPosicaoVisualizar" style="color:#1565c0; margin:0 0 10px 0; font-size:1.1rem;">Posição</h3>
+            <div class="lista-jogadores" id="listaVisualizarContainer"></div>
+        </div>
+
+        <button class="btn-voltar" onclick="voltarMenu()">Voltar</button>
+    </div>
+
+    <!-- PERFIL DO JOGADOR -->
+    <div class="painel-conteudo" id="painelPerfilJogador">
+        <div style="display: flex; justify-content: flex-end; gap: 5px; margin-bottom: 5px;">
+            <button class="btn-editar" onclick="iniciarEdicaoPerfilAtual()" title="Editar Jogador">✏️</button>
+            <button class="btn-excluir" onclick="excluirJogadorPerfilAtual()" title="Excluir Jogador">🗑️</button>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 10px;">
+            <img id="modalJogadorCamisa" class="time-escudo" style="width: 75px; height: 75px; margin: 0 auto 8px auto; display: block;" alt="Camisa">
+            <h2 id="modalJogadorNome" style="margin-bottom: 2px;">Nome do Jogador</h2>
+            <div id="modalBadgeRankContainer" style="margin-bottom: 6px;"></div>
+            <p id="modalJogadorDesc" style="color: #666; margin: 0 0 10px 0; font-size: 0.85rem; font-style: italic;"></p>
+        </div>
+
+        <div class="perfil-secao">
+            <h3>👤 Dados Físicos</h3>
+            <p style="margin: 2px 0;">👤 Idade: <span id="modalJIdade">0</span> anos | ⚡ Energia: <span id="modalJEnergia">0</span>/2</p>
+        </div>
+
+        <div class="perfil-secao">
+            <h3>⚡ Atributos Fixos</h3>
+            <div id="modalContainerAtributos"></div>
+        </div>
+
+        <div class="perfil-secao">
+            <h3>📊 Estatísticas Gerais</h3>
+            <div id="modalContainerEstatisticasGerais"></div>
+        </div>
+
+        <div class="perfil-secao">
+            <h3>🏅 Premiações & Medalhas</h3>
+            <div id="modalContainerMedalhas" style="font-size: 0.85rem; color: #333;">Nenhuma medalha conquistada.</div>
+        </div>
+
+        <div class="perfil-secao">
+            <h3>📅 Histórico por Temporadas</h3>
+            <div id="modalContainerHistoricoTemporadas" style="max-height: 180px; overflow-y: auto; font-size: 0.85rem;">
+                Nenhum histórico registrado.
+            </div>
+            <div id="modalDetalheTemporadaBox" style="background:#fff; padding:8px; border-radius:6px; margin-top:8px; border:1px solid #90caf9; display:none;">
+                <b id="modalDetalheTempTitulo" style="color:#1565c0; font-size:0.8rem;"></b>
+                <div id="modalDetalheTempConteudo" style="font-size:0.78rem; color:#444; margin-top:4px;"></div>
+            </div>
+        </div>
+
+        <div class="perfil-secao">
+            <h3>💎 Valor de Mercado</h3>
+            <p id="modalJValor" style="margin: 0; font-weight: bold; color: #2e7d32;">R$ 0</p>
+        </div>
+
+        <button class="btn-voltar" onclick="fecharPerfilJogador()">Voltar</button>
+    </div>
+
+    <!-- 2. PAINEL CRIAR NOVO JOGADOR -->
+    <div class="painel-conteudo" id="formCriarJogador">
+        <h2>Novo Jogador</h2>
+        
+        <div class="input-group">
+            <label style="display:flex; justify-content:space-between; align-items:center;">
+                Nome: <span style="cursor:pointer; font-size:1.1rem;" onclick="sortearNome('inputNome')" title="Gerar Nome Aleatório">🎲</span>
+            </label>
+            <input type="text" id="inputNome" placeholder="Nome do jogador">
+        </div>
+
+        <div class="input-group">
+            <label>Posição:</label>
+            <select id="inputPosicao" onchange="verificarEstadoBotaoAtributosAleatorios()">
+                <option value="Goleiro">Goleiro</option>
+                <option value="Zagueiro">Zagueiro</option>
+                <option value="Meia defensivo">Meia defensivo</option>
+                <option value="Meia ofensivo">Meia ofensivo</option>
+                <option value="Atacante">Atacante</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>Vincular ao Time (Opcional):</label>
+            <select id="inputTimeId">
+                <option value="">Sem time (Agente Livre)</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>Número da Camisa:</label>
+            <input type="number" id="inputNumero" placeholder="Ex: 10" min="1" max="99">
+        </div>
+
+        <div class="input-group">
+            <label>Idade:</label>
+            <input type="number" id="inputidade" value="20" min="16" max="50">
+        </div>
+
+        <div class="input-group">
+            <label>Descrição (Opcional):</label>
+            <textarea id="inputDesc" rows="2" placeholder="Breve descrição ou biografia"></textarea>
+        </div>
+
+        <div class="input-group">
+            <label>Habilidade Especial:</label>
+            <select id="inputHabilidadeId">
+                <option value="">Nenhuma habilidade</option>
+            </select>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+            <label style="font-weight: bold; color: #333; font-size: 0.9rem;">Atributos Fixos Iniciais:</label>
+            <button type="button" id="btnSortearAttrUnico" onclick="sortearAtributosCriarUnico()" style="background:#e3f2fd; border:1px solid #2196f3; color:#1565c0; font-weight:bold; border-radius:4px; padding:2px 8px; cursor:pointer; font-size:0.75rem;" title="Sortear Atributos Compatíveis">🎲 Sortear</button>
+        </div>
+        
+        <div class="attr-row"><span>Velocidade</span><div class="attr-controls"><button type="button" class="attr-btn" onclick="ajustarAttr('inputVel', -1)">-</button><span id="valInputVel" style="width:25px; text-align:center;">0</span><button type="button" class="attr-btn" onclick="ajustarAttr('inputVel', 1)">+</button></div></div>
+        <div class="attr-row"><span>Precisão</span><div class="attr-controls"><button type="button" class="attr-btn" onclick="ajustarAttr('inputPrec', -1)">-</button><span id="valInputPrec" style="width:25px; text-align:center;">0</span><button type="button" class="attr-btn" onclick="ajustarAttr('inputPrec', 1)">+</button></div></div>
+        <div class="attr-row"><span>Assistência</span><div class="attr-controls"><button type="button" class="attr-btn" onclick="ajustarAttr('inputAssis', -1)">-</button><span id="valInputAssis" style="width:25px; text-align:center;">0</span><button type="button" class="attr-btn" onclick="ajustarAttr('inputAssis', 1)">+</button></div></div>
+        <div class="attr-row"><span>Marcação</span><div class="attr-controls"><button type="button" class="attr-btn" onclick="ajustarAttr('inputMarc', -1)">-</button><span id="valInputMarc" style="width:25px; text-align:center;">0</span><button type="button" class="attr-btn" onclick="ajustarAttr('inputMarc', 1)">+</button></div></div>
+        <div class="attr-row"><span>Reflexo</span><div class="attr-controls"><button type="button" class="attr-btn" onclick="ajustarAttr('inputRef', -1)">-</button><span id="valInputRef" style="width:25px; text-align:center;">0</span><button type="button" class="attr-btn" onclick="ajustarAttr('inputRef', 1)">+</button></div></div>
+
+        <button class="btn-acao" onclick="salvarNovoJogador()">Salvar Jogador</button>
+        <button class="btn-voltar" onclick="voltarMenu()">Voltar</button>
+    </div>
+
+    <!-- 3. PAINEL CRIAR JOGADORES EM MASSA -->
+    <div class="painel-conteudo" id="formCriarEmMassa">
+        <h2>Criar Jogadores em Massa</h2>
+        
+        <div class="input-group">
+            <label>Posição:</label>
+            <select id="massaPosicao">
+                <option value="Goleiro">Goleiro</option>
+                <option value="Zagueiro">Zagueiro</option>
+                <option value="Meia defensivo">Meia defensivo</option>
+                <option value="Meia ofensivo">Meia ofensivo</option>
+                <option value="Atacante">Atacante</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>Rank Desejado:</label>
+            <select id="massaRank">
+                <option value="Rank-E">Rank-E (Atributo máx 0)</option>
+                <option value="Rank-D">Rank-D (Atributo máx 1)</option>
+                <option value="Rank-C">Rank-C (Atributo máx 2)</option>
+                <option value="Rank-B">Rank-B (Atributo máx 3)</option>
+                <option value="Rank-A">Rank-A (Atributo máx 4)</option>
+                <option value="Rank-S">Rank-S (Atributo máx 5)</option>
+                <option value="Rank nacional">Rank Nacional (Atributo 6+)</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>Quantidade:</label>
+            <input type="number" id="massaQtd" value="5" min="1" max="50">
+        </div>
+
+        <button class="btn-acao" style="background-color: #ff9800;" onclick="executarCriacaoEmMassa()">Gerar e Salvar Jogadores 🚀</button>
+        <button class="btn-voltar" onclick="voltarMenu()">Voltar</button>
+    </div>
+
+    <!-- SUB-PAINEL DE EDIÇÃO INDIVIDUAL -->
+    <div class="painel-conteudo" id="formEditarIndividual">
+        <h2>Editar Jogador</h2>
+        <input type="hidden" id="editId">
+        
+        <div class="input-group">
+            <label style="display:flex; justify-content:space-between; align-items:center;">
+                Nome: <span style="cursor:pointer; font-size:1.1rem;" onclick="sortearNome('editNome')" title="Gerar Nome Aleatório">🎲</span>
+            </label>
+            <input type="text" id="editNome">
+        </div>
+
+        <div class="input-group">
+            <label>Posição:</label>
+            <select id="editPosicao">
+                <option value="Goleiro">Goleiro</option>
+                <option value="Zagueiro">Zagueiro</option>
+                <option value="Meia defensivo">Meia defensivo</option>
+                <option value="Meia ofensivo">Meia ofensivo</option>
+                <option value="Atacante">Atacante</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>Número da Camisa:</label>
+            <input type="number" id="editNumero" min="1" max="99">
+        </div>
+
+        <div class="input-group">
+            <label>Idade:</label>
+            <input type="number" id="editidade" min="16" max="60">
+        </div>
+
+        <div class="input-group">
+            <label>Descrição:</label>
+            <textarea id="editDesc" rows="2"></textarea>
+        </div>
+
+        <div class="input-group">
+            <label>Habilidade Especial:</label>
+            <select id="editHabilidadeId">
+                <option value="">Nenhuma habilidade</option>
+            </select>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+            <label style="font-weight: bold; color: #333; font-size: 0.9rem;">Modificar Atributos Fixos:</label>
+            <button type="button" onclick="sortearAtributosEditar()" style="background:#e3f2fd; border:1px solid #2196f3; color:#1565c0; font-weight:bold; border-radius:4px; padding:2px 8px; cursor:pointer; font-size:0.75rem;" title="Sortear Atributos Compatíveis">🎲 Sortear</button>
+        </div>
+        
+        <div class="attr-row"><span>Velocidade</span><div class="attr-controls"><button type="button" class="attr-btn" onclick="ajustarAttr('editVel', -1)">-</button><span id="valEditVel" style="width:25px; text-align:center;">0</span><button type="button" class="attr-btn" onclick="ajustarAttr('editVel', 1)">+</button></div></div>
+        <div class="attr-row"><span>Precisão</span><div class="attr-controls"><button type="button" class="attr-btn" onclick="ajustarAttr('editPrec', -1)">-</button><span id="valEditPrec" style="width:25px; text-align:center;">0</span><button type="button" class="attr-btn" onclick="ajustarAttr('editPrec', 1)">+</button></div></div>
+        <div class="attr-row"><span>Assistência</span><div class="attr-controls"><button type="button" class="attr-btn" onclick="ajustarAttr('editAssis', -1)">-</button><span id="valEditAssis" style="width:25px; text-align:center;">0</span><button type="button" class="attr-btn" onclick="ajustarAttr('editAssis', 1)">+</button></div></div>
+        <div class="attr-row"><span>Marcação</span><div class="attr-controls"><button type="button" class="attr-btn" onclick="ajustarAttr('editMarc', -1)">-</button><span id="valEditMarc" style="width:25px; text-align:center;">0</span><button type="button" class="attr-btn" onclick="ajustarAttr('editMarc', 1)">+</button></div></div>
+        <div class="attr-row"><span>Reflexo</span><div class="attr-controls"><button type="button" class="attr-btn" onclick="ajustarAttr('editRef', -1)">-</button><span id="valEditRef" style="width:25px; text-align:center;">0</span><button type="button" class="attr-btn" onclick="ajustarAttr('editRef', 1)">+</button></div></div>
+
+        <button class="btn-acao" onclick="salvarEdicaoJogador()">Atualizar</button>
+        <button class="btn-voltar" onclick="cancelarEdicaoJogador()">Cancelar</button>
+    </div>
+
+    <!-- Barra de Navegação Inferior -->
+    <nav class="nav-bar">
+        <a href="times.html" class="nav-btn" onclick="mudarTela(event, 'times.html')">
+            <span class="icon">🛡️</span> Times
+        </a>
+        <a href="index.html" class="nav-btn" onclick="mudarTela(event, 'index.html')">
+            <span class="icon">🏠</span> Jogos
+        </a>
+        <a href="rankings.html" class="nav-btn" onclick="mudarTela(event, 'rankings.html')">
+            <span class="icon">🏅</span> Rankings
+        </a>
+    </nav>
+
+    <script>
+        const SUPABASE_URL = 'https://aqfabyfiuxqqqnzfgiys.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxZmFieWZpdXhxcXFuemZnaXlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3NzU1MzAsImV4cCI6MjEwMjM1MTUzMH0.YirbXzZhQgCEyfEPy5gVDqkBMMJQnpZ-KVmlLJxyv9o';
+        const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const DB_NAME = "FuteBrawlOfflineDB";
+        const DB_VERSION = 2;
+
+        const listaNomes = ["Lucas", "Gabriel", "Matheus", "Guilherme", "Rafael", "Bruno", "Felipe", "Thiago", "Vinicius", "Leonardo", "Rodrigo", "Gustavo", "Daniel", "Carlos", "Diego", "Eduardo", "Marcos", "Alex", "Pedro", "João"];
+        const listaSobrenomes = ["Silva", "Santos", "Oliveira", "Souza", "Rodrigues", "Ferreira", "Alves", "Pereira", "Lima", "Gomes", "Costa", "Ribeiro", "Martins", "Carvalho", "Almeida", "Lopes", "Soares", "Barbosa", "Rocha", "Dias"];
+
+        const fallbackHabilidadesDesc = {
+            "at_1": "+4 de bônus na velocidade.",
+            "at_2": "+4 de precisão (50% chance de chutar antes ou passar a zaga).",
+            "at_3": "Anula 100% o reflexo do goleiro adversário.",
+            "at_5": "Reduz todos os atributos em campo a 0, decidindo apenas na sorte.",
+            "mo_3": "Eleva o dado de chute do colega assistido para D30.",
+            "mo_4": "Copia a habilidade do adversário em campo.",
+            "md_2": "Muda o dado de defesa de todos os aliados para D22 (exceto exceções maiores).",
+            "md_5": "Utiliza dado de D30 na defesa para si e MO aliado.",
+            "za_1": "+4 de marcação para si.",
+            "za_2": "Obriga a dupla rival a vencer a zaga duas vezes.",
+            "za_4": "+1 de marcação a cada desarme bem-sucedido.",
+            "za_5": "Anula as habilidades de todos os adversários na partida inteira.",
+            "go_1": "Utiliza dado de D30 em sua defesa.",
+            "go_2": "+4 de bônus no reflexo."
+        };
+
+        const listaCompletaHabilidades = [
+            { id: "at_1", nome: "Flash" },
+            { id: "at_2", nome: "Impacto" },
+            { id: "at_3", nome: "Olhos do Imperador" },
+            { id: "at_5", nome: "Jogada Coringa" },
+            { id: "mo_3", nome: "Garçom Impecável" },
+            { id: "mo_4", nome: "Clone" },
+            { id: "md_2", nome: "Desarme Coordenado" },
+            { id: "md_5", nome: "Dobra de Valor" },
+            { id: "za_1", nome: "Muralha" },
+            { id: "za_2", nome: "Barreira Infernal" },
+            { id: "za_4", nome: "Devorador de Às" },
+            { id: "za_5", nome: "Full Counter" },
+            { id: "go_1", nome: "Muro de Ferro" },
+            { id: "go_2", nome: "Instinto Superior" }
+        ];
+
+        function abrirBancoLocal() {
+            return new Promise((resolve, reject) => {
+                let request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                request.onupgradeneeded = (event) => {
+                    let db = event.target.result;
+                    if (!db.objectStoreNames.contains("times")) db.createObjectStore("times", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("jogadores")) db.createObjectStore("jogadores", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("partidas")) db.createObjectStore("partidas", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("temporadas")) db.createObjectStore("temporadas", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("historico_financeiro")) db.createObjectStore("historico_financeiro", { keyPath: "id", autoIncrement: true });
+                    if (!db.objectStoreNames.contains("estatisticas_partida_jogadores")) db.createObjectStore("estatisticas_partida_jogadores", { keyPath: "id", autoIncrement: true });
+                    if (!db.objectStoreNames.contains("habilidades_custom")) db.createObjectStore("habilidades_custom", { keyPath: "id" });
+                };
+            });
+        }
+
+        async function salvarLocal(storeName, dados) {
+            let db = await abrirBancoLocal();
+            return new Promise((resolve, reject) => {
+                let transaction = db.transaction(storeName, "readwrite");
+                let store = transaction.objectStore(storeName);
+                if (Array.isArray(dados)) {
+                    dados.forEach(item => store.put(item));
+                } else {
+                    store.put(dados);
+                }
+                transaction.oncomplete = () => resolve(true);
+                transaction.onerror = () => reject(transaction.error);
+            });
+        }
+
+        async function deletarLocal(storeName, id) {
+            let db = await abrirBancoLocal();
+            return new Promise((resolve, reject) => {
+                let transaction = db.transaction(storeName, "readwrite");
+                let store = transaction.objectStore(storeName);
+                store.delete(id);
+                transaction.oncomplete = () => resolve(true);
+                transaction.onerror = () => reject(transaction.error);
+            });
+        }
+
+        async function lerLocal(storeName) {
+            let db = await abrirBancoLocal();
+            return new Promise((resolve, reject) => {
+                let transaction = db.transaction(storeName, "readonly");
+                let store = transaction.objectStore(storeName);
+                let request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => resolve([]);
+            });
+        }
+
+        let timesCacheMap = {};
+        let jogadoresCache = [];
+        let posicaoAtualVisualizar = '';
+        let jogadorAtualPerfil = null;
+        let modoSelecaoMassaAtivo = false;
+        let idsSelecionadosMassa = new Set();
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            await carregarCacheTimesLocal();
+            CacheJogadoresLocal();
+            popularSelectHabilidades();
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('estrela-habilidade') && !e.target.classList.contains('icone-medalha-conquista')) {
+                    removerBalaoEstrela();
+                }
+            });
+        });
+
+        async function carregarCacheTimesLocal() {
+            let timesLocal = await lerLocal("times");
+            timesCacheMap = {};
+            const selectTime = document.getElementById('inputTimeId');
+            const selectTimeFiltro = document.getElementById('filtroTimeVisualizar');
+
+            if (selectTime) selectTime.innerHTML = '<option value="">Sem time (Agente Livre)</option>';
+            if (selectTimeFiltro) {
+                selectTimeFiltro.innerHTML = `
+                    <option value="">Todos os Times</option>
+                    <option value="sem_time">Sem Time (Agentes Livres)</option>
+                `;
+            }
+
+            if (timesLocal) {
+                timesLocal.sort((a,b) => a.nome.localeCompare(b.nome));
+                timesLocal.forEach(t => {
+                    timesCacheMap[String(t.id)] = t;
+                    if (selectTime) selectTime.innerHTML += `<option value="${t.id}">${t.nome} (${t.regiao})</option>`;
+                    if (selectTimeFiltro) selectTimeFiltro.innerHTML += `<option value="${t.id}">${t.nome}</option>`;
+                });
+            }
+        }
+
+        async function CacheJogadoresLocal() {
+            jogadoresCache = await lerLocal("jogadores") || [];
+            jogadoresCache.sort((a,b) => a.nome.localeCompare(b.nome));
+        }
+
+        function popularSelectHabilidades() {
+            const selectCriar = document.getElementById('inputHabilidadeId');
+            const selectEditar = document.getElementById('editHabilidadeId');
+
+            let htmlOpts = '<option value="">Nenhuma habilidade</option>';
+            listaCompletaHabilidades.forEach(h => {
+                htmlOpts += `<option value="${h.id}">${h.nome}</option>`;
+            });
+
+            if (selectCriar) selectCriar.innerHTML = htmlOpts;
+            if (selectEditar) selectEditar.innerHTML = htmlOpts;
+        }
+
+        const normalizar = (str) => (str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/-/g, ' ').trim();
+
+        function calcularRankJogador(j) {
+            let posNorm = normalizar(j.posicao);
+            let valorAtributo = 0;
+
+            if (posNorm.includes('goleiro')) {
+                valorAtributo = j.reflexo || 0;
+            } 
+            else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
+                valorAtributo = j.marcacao || 0;
+            } 
+            else {
+                let vel = j.velocidade || 0;
+                let prec = j.precisao || 0;
+                let assis = j.assistencia || 0;
+                valorAtributo = Math.max(vel, prec, assis);
+            }
+
+            if (valorAtributo <= 0) return { nome: 'Rank-E', cor: '#1976d2', pts: 1 };
+            if (valorAtributo === 1) return { nome: 'Rank-D', cor: '#388e3c', pts: 2 };
+            if (valorAtributo === 2) return { nome: 'Rank-C', cor: '#fbc02d', pts: 3 };
+            if (valorAtributo === 3) return { nome: 'Rank-B', cor: '#f57c00', pts: 4 };
+            if (valorAtributo === 4) return { nome: 'Rank-A', cor: '#d32f2f', pts: 5 };
+            if (valorAtributo === 5) return { nome: 'Rank-S', cor: '#7b1fa2', pts: 6 };
+            return { nome: 'Rank nacional', cor: '#000000', pts: 7 };
+        }
+
+        // TABELA DE VALORES BASE POR POSIÇÃO E RANK
+        function getBaseValorRank(posNorm, rankName) {
+            if (posNorm.includes('goleiro')) {
+                switch(rankName) {
+                    case 'Rank-E': return 60000;
+                    case 'Rank-D': return 360000;
+                    case 'Rank-C': return 660000;
+                    case 'Rank-B': return 960000;
+                    case 'Rank-A': return 1260000;
+                    case 'Rank-S': return 1560000;
+                    case 'Rank nacional': return 2560000;
+                    default: return 60000;
+                }
+            } else if (posNorm.includes('meia defensivo') || posNorm.includes('md')) {
+                switch(rankName) {
+                    case 'Rank-E': return 120000;
+                    case 'Rank-D': return 420000;
+                    case 'Rank-C': return 720000;
+                    case 'Rank-B': return 1020000;
+                    case 'Rank-A': return 1320000;
+                    case 'Rank-S': return 1620000;
+                    case 'Rank nacional': return 2620000;
+                    default: return 120000;
+                }
+            } else if (posNorm.includes('zagueiro') || posNorm.includes('za')) {
+                switch(rankName) {
+                    case 'Rank-E': return 180000;
+                    case 'Rank-D': return 480000;
+                    case 'Rank-C': return 780000;
+                    case 'Rank-B': return 1080000;
+                    case 'Rank-A': return 1380000;
+                    case 'Rank-S': return 1680000;
+                    case 'Rank nacional': return 2680000;
+                    default: return 180000;
+                }
+            } else if (posNorm.includes('meia ofensivo') || (posNorm.includes('meia') && !posNorm.includes('defensiv')) || posNorm.includes('mo')) {
+                switch(rankName) {
+                    case 'Rank-E': return 240000;
+                    case 'Rank-D': return 540000;
+                    case 'Rank-C': return 840000;
+                    case 'Rank-B': return 1140000;
+                    case 'Rank-A': return 1440000;
+                    case 'Rank-S': return 1740000;
+                    case 'Rank nacional': return 2740000;
+                    default: return 240000;
+                }
+            } else {
+                switch(rankName) {
+                    case 'Rank-E': return 300000;
+                    case 'Rank-D': return 600000;
+                    case 'Rank-C': return 900000;
+                    case 'Rank-B': return 1200000;
+                    case 'Rank-A': return 1500000;
+                    case 'Rank-S': return 1800000;
+                    case 'Rank nacional': return 2800000;
+                    default: return 300000;
+                }
+            }
+        }
+
+        // MAPA DE BÔNUS DO TOP 10 DA TEMPORADA ANTERIOR
+        async function construirMapaBonusRankingTemporadaAnterior() {
+            let bonusMap = {};
+            try {
+                let temporadasLocal = await lerLocal("temporadas");
+                let tempAtiva = temporadasLocal.find(t => t.status === 'em_andamento') || temporadasLocal[temporadasLocal.length - 1];
+                let tempIdAtiva = tempAtiva ? tempAtiva.id : 1;
+
+                if (tempIdAtiva <= 1) return bonusMap; // Temporada 1 não aplica bônus de rank anterior
+
+                let prevTempId = tempIdAtiva - 1;
+                let partidasLocal = await lerLocal("partidas");
+                let statsPartidasLocal = await lerLocal("estatisticas_partida_jogadores");
+                let jogadoresLocal = await lerLocal("jogadores");
+
+                let idsPartPrev = new Set(partidasLocal.filter(p => p.temporada_id === prevTempId && p.status === 'concluido').map(p => p.id));
+                if (idsPartPrev.size === 0) return bonusMap;
+
+                let mapaSt = {};
+                statsPartidasLocal.forEach(s => {
+                    if (idsPartPrev.has(s.partida_id)) {
+                        if (!mapaSt[s.jogador_id]) mapaSt[s.jogador_id] = { gols: 0, assistencias: 0, desarmes: 0, defesas: 0 };
+                        mapaSt[s.jogador_id].gols += (s.gols || 0) + (s.assistencias_gols || 0);
+                        mapaSt[s.jogador_id].desarmes += (s.desarmes || 0);
+                        mapaSt[s.jogador_id].defesas += (s.defesas || 0);
+                    }
+                });
+
+                let lGol = [], lZag = [], lMD = [], lMO = [], lAt = [];
+                jogadoresLocal.forEach(atleta => {
+                    let pNorm = normalizar(atleta.posicao);
+                    let st = mapaSt[atleta.id] || { gols: 0, assistencias: 0, desarmes: 0, defesas: 0 };
+                    let reg = { jogador: atleta, est: 0 };
+
+                    if (pNorm.includes('goleiro')) { reg.est = st.defesas; lGol.push(reg); }
+                    else if (pNorm.includes('zagueiro')) { reg.est = st.desarmes; lZag.push(reg); }
+                    else if (pNorm.includes('meia defensivo')) { reg.est = st.desarmes; lMD.push(reg); }
+                    else if (pNorm.includes('meia ofensivo') || (pNorm.includes('meia') && !pNorm.includes('defensiv'))) { reg.est = st.gols; lMO.push(reg); }
+                    else if (pNorm.includes('atacante')) { reg.est = st.gols; lAt.push(reg); }
+                });
+
+                let ordenarRank = (a, b) => b.est - a.est || a.jogador.nome.localeCompare(b.jogador.nome);
+                
+                [lGol, lZag, lMD, lMO, lAt].forEach(lista => {
+                    lista.sort(ordenarRank);
+                    let top10 = lista.slice(0, 10);
+                    top10.forEach((x, idx) => {
+                        let posicaoRanking = idx + 1; // 1º ao 10º
+                        let bonus = (11 - posicaoRanking) * 500000; // 10º = 500k ... 1º = 5M
+                        bonusMap[x.jogador.id] = bonus;
+                    });
+                });
+            } catch (err) {
+                console.error("Erro ao calcular bônus de ranking anterior:", err);
+            }
+            return bonusMap;
+        }
+
+        async function calcularValorMercadoComBonus(j) {
+            let rank = calcularRankJogador(j);
+            let posNorm = normalizar(j.posicao);
+            let base = getBaseValorRank(posNorm, rank.nome);
+
+            if (j.habilidade_id) {
+                base += 3000000; // Adicional de +3.000.000 para habilidade
+            }
+
+            let bonusMap = await construirMapaBonusRankingTemporadaAnterior();
+            if (bonusMap[j.id]) {
+                base += bonusMap[j.id];
+            }
+
+            return base;
+        }
+
+        async function mostrarBalaoEstrela(event, habId) {
+            event.stopPropagation();
+            removerBalaoEstrela();
+
+            let customizadas = await lerLocal("habilidades_custom");
+            let customObj = customizadas.find(c => c.id === habId);
+            let nomeHab = "";
+            let descHab = "";
+
+            let baseHabObj = listaCompletaHabilidades.find(h => h.id === habId);
+            if (baseHabObj) nomeHab = baseHabObj.nome;
+
+            if (customObj && customObj.descCurta) {
+                descHab = customObj.descCurta;
+            } else {
+                descHab = fallbackHabilidadesDesc[habId] || "Habilidade especial tática ativa.";
+            }
+
+            let textoHabilidade = nomeHab ? `${nomeHab}: ${descHab}` : descHab;
+            let balao = document.createElement('div');
+            balao.className = 'tooltip-balao';
+            balao.id = 'balaAtivoEstrela';
+            balao.innerText = textoHabilidade;
+
+            document.body.appendChild(balao);
+
+            let rect = event.target.getBoundingClientRect();
+            balao.style.top = (window.scrollY + rect.bottom + 6) + 'px';
+            balao.style.left = (window.scrollX + rect.left - 80) + 'px';
+        }
+
+        function mostrarBalaoMedalha(event, descricaoConquista) {
+            event.stopPropagation();
+            removerBalaoEstrela();
+
+            let balao = document.createElement('div');
+            balao.className = 'tooltip-balao';
+            balao.id = 'balaAtivoEstrela';
+            balao.innerText = descricaoConquista;
+
+            document.body.appendChild(balao);
+
+            let rect = event.target.getBoundingClientRect();
+            balao.style.top = (window.scrollY + rect.bottom + 6) + 'px';
+            balao.style.left = (window.scrollX + rect.left - 80) + 'px';
+        }
+
+        function removerBalaoEstrela() {
+            let balaoAntigo = document.getElementById('balaAtivoEstrela');
+            if (balaoAntigo) balaoAntigo.remove();
+        }
+
+        let atributosCriar = { inputVel: 0, inputPrec: 0, inputAssis: 0, inputMarc: 0, inputRef: 0 };
+        let atributosEditar = { editVel: 0, editPrec: 0, editAssis: 0, editMarc: 0, editRef: 0 };
+
+        function ajustarAttr(id, delta) {
+            let container = id.startsWith('edit') ? atributosEditar : atributosCriar;
+            container[id] = Math.max(0, (container[id] || 0) + delta);
+            document.getElementById(`val${id.charAt(0).toUpperCase() + id.slice(1)}`).innerText = container[id];
+        }
+
+        function verificarEstadoBotaoAtributosAleatorios() {
+            let btn = document.getElementById('btnSortearAttrUnico');
+            if (btn) btn.style.display = 'inline-block';
+        }
+
+        function sortearNome(elementId = 'inputNome') {
+            let nomeR = listaNomes[Math.floor(Math.random() * listaNomes.length)];
+            let sobrenomeR = listaSobrenomes[Math.floor(Math.random() * listaSobrenomes.length)];
+            let campo = document.getElementById(elementId);
+            if (campo) campo.value = `${nomeR} ${sobrenomeR}`;
+        }
+
+        function sortearAtributosCriarUnico() {
+            let pos = document.getElementById('inputPosicao').value;
+            let posNorm = normalizar(pos);
+
+            atributosCriar = { inputVel: 0, inputPrec: 0, inputAssis: 0, inputMarc: 0, inputRef: 0 };
+
+            if (posNorm.includes('goleiro')) {
+                atributosCriar.inputRef = Math.floor(Math.random() * 7); // 0 a 6
+            } else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
+                atributosCriar.inputMarc = Math.floor(Math.random() * 7); // 0 a 6
+            } else {
+                atributosCriar.inputVel = Math.floor(Math.random() * 7);
+                atributosCriar.inputPrec = Math.floor(Math.random() * 7);
+                atributosCriar.inputAssis = Math.floor(Math.random() * 7);
+            }
+
+            for (let k in atributosCriar) {
+                document.getElementById(`val${k.charAt(0).toUpperCase() + k.slice(1)}`).innerText = atributosCriar[k];
+            }
+        }
+
+        function sortearAtributosEditar() {
+            let pos = document.getElementById('editPosicao').value;
+            let posNorm = normalizar(pos);
+
+            atributosEditar = { editVel: 0, editPrec: 0, editAssis: 0, editMarc: 0, editRef: 0 };
+
+            if (posNorm.includes('goleiro')) {
+                atributosEditar.editRef = Math.floor(Math.random() * 7);
+            } else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
+                atributosEditar.editMarc = Math.floor(Math.random() * 7);
+            } else {
+                atributosEditar.editVel = Math.floor(Math.random() * 7);
+                atributosEditar.editPrec = Math.floor(Math.random() * 7);
+                atributosEditar.editAssis = Math.floor(Math.random() * 7);
+            }
+
+            for (let k in atributosEditar) {
+                document.getElementById(`val${k.charAt(0).toUpperCase() + k.slice(1)}`).innerText = atributosEditar[k];
+            }
+        }
+
+        function esconderTodosPainéis() {
+            removerBalaoEstrela();
+            document.getElementById('menuJogadores').style.display = 'none';
+            document.getElementById('painelVisualizar').style.display = 'none';
+            document.getElementById('painelPerfilJogador').style.display = 'none';
+            document.getElementById('formCriarJogador').style.display = 'none';
+            document.getElementById('formCriarEmMassa').style.display = 'none';
+            document.getElementById('formEditarIndividual').style.display = 'none';
+        }
+
+        function voltarMenu() {
+            esconderTodosPainéis();
+            document.getElementById('menuJogadores').style.display = 'flex';
+        }
+
+        async function abrirCriar() {
+            esconderTodosPainéis();
+            await carregarCacheTimesLocal();
+            document.getElementById('formCriarJogador').style.display = 'block';
+            sortearNome('inputNome');
+            document.getElementById('inputDesc').value = '';
+            document.getElementById('inputNumero').value = Math.floor(Math.random() * 90) + 1;
+            document.getElementById('inputidade').value = Math.floor(Math.random() * 5) + 16; // 16 a 20
+            document.getElementById('inputPosicao').value = 'Goleiro';
+            document.getElementById('inputTimeId').value = '';
+            document.getElementById('inputHabilidadeId').value = '';
+
+            sortearAtributosCriarUnico();
+        }
+
+        function abrirCriarEmMassa() {
+            esconderTodosPainéis();
+            document.getElementById('formCriarEmMassa').style.display = 'block';
+        }
+
+        async function executarCriacaoEmMassa() {
+            let posicao = document.getElementById('massaPosicao').value;
+            let rankDesejado = document.getElementById('massaRank').value;
+            let quantidade = parseInt(document.getElementById('massaQtd').value) || 5;
+
+            let limMax = 0;
+            if (rankDesejado === 'Rank-E') limMax = 0;
+            else if (rankDesejado === 'Rank-D') limMax = 1;
+            else if (rankDesejado === 'Rank-C') limMax = 2;
+            else if (rankDesejado === 'Rank-B') limMax = 3;
+            else if (rankDesejado === 'Rank-A') limMax = 4;
+            else if (rankDesejado === 'Rank-S') limMax = 5;
+            else if (rankDesejado === 'Rank nacional') limMax = 6;
+
+            let jogadoresLocal = await lerLocal("jogadores");
+            let maiorId = jogadoresLocal.length > 0 ? Math.max(...jogadoresLocal.map(j => j.id)) : 0;
+            let novosAtletas = [];
+
+            let posNorm = normalizar(posicao);
+
+            for (let i = 0; i < quantidade; i++) {
+                maiorId++;
+                let nomeR = listaNomes[Math.floor(Math.random() * listaNomes.length)];
+                let sobrenomeR = listaSobrenomes[Math.floor(Math.random() * listaSobrenomes.length)];
+                let nomeCompleto = `${nomeR} ${sobrenomeR}`;
+
+                let vel = 0, prec = 0, assis = 0, marc = 0, ref = 0;
+
+                if (posNorm.includes('goleiro')) {
+                    ref = limMax === 6 ? Math.floor(Math.random() * 2) + 6 : limMax;
+                } else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
+                    marc = limMax === 6 ? Math.floor(Math.random() * 2) + 6 : limMax;
+                } else {
+                    let valAlvo = limMax === 6 ? Math.floor(Math.random() * 2) + 6 : limMax;
+                    vel = Math.floor(Math.random() * (limMax + 1));
+                    prec = Math.floor(Math.random() * (limMax + 1));
+                    assis = Math.floor(Math.random() * (limMax + 1));
+
+                    let idxGarante = Math.floor(Math.random() * 3);
+                    if (idxGarante === 0) vel = valAlvo;
+                    else if (idxGarante === 1) prec = valAlvo;
+                    else assis = valAlvo;
+                }
+
+                novosAtletas.push({
+                    id: maiorId,
+                    nome: nomeCompleto,
+                    posicao: posicao,
+                    time_id: null,
+                    numero: Math.floor(Math.random() * 90) + 1,
+                    idade: Math.floor(Math.random() * 5) + 16, // 16 a 20
+                    energia: 2,
+                    desc: "Atleta gerado em massa automaticamente.",
+                    habilidade_id: null,
+                    velocidade: vel,
+                    precisao: prec,
+                    assistencia: assis,
+                    marcacao: marc,
+                    reflexo: ref,
+                    gols: 0, partidas: 0, assistencia_gols: 0, assistencia_defensiva: 0, desarmes: 0, defesas: 0,
+                    mundiais: 0, regionais: 0, liga: 0, conquistas: [], aposentado: false
+                });
+            }
+
+            await salvarLocal("jogadores", novosAtletas);
+            alert(`🎉 ${quantidade} jogadores criados com sucesso!`);
+            voltarMenu();
+        }
+
+        // ================= 1. VISUALIZAR JOGADORES =================
+        async function abrirVisualizar() {
+            esconderTodosPainéis();
+            await carregarCacheTimesLocal();
+            await CacheJogadoresLocal();
+
+            document.getElementById('filtroRankVisualizar').value = '';
+            document.getElementById('filtroTimeVisualizar').value = '';
+            document.getElementById('menuPosicoesVisualizar').style.display = 'block';
+            document.getElementById('areaListaVisualizar').style.display = 'none';
+            document.getElementById('barraSelecaoMassa').style.display = 'none';
+            modoSelecaoMassaAtivo = false;
+            idsSelecionadosMassa.clear();
+            document.getElementById('painelVisualizar').style.display = 'block';
+        }
+
+        function voltarCategoriasVisualizar() {
+            document.getElementById('menuPosicoesVisualizar').style.display = 'block';
+            document.getElementById('areaListaVisualizar').style.display = 'none';
+            document.getElementById('barraSelecaoMassa').style.display = 'none';
+            modoSelecaoMassaAtivo = false;
+            idsSelecionadosMassa.clear();
+        }
+
+        function filtrarVisualizarPorPosicao(posicaoDesejada) {
+            posicaoAtualVisualizar = posicaoDesejada;
+            document.getElementById('menuPosicoesVisualizar').style.display = 'none';
+            document.getElementById('areaListaVisualizar').style.display = 'block';
+            document.getElementById('tituloPosicaoVisualizar').innerText = `Atletas: ${posicaoDesejada}`;
+            renderizarListaFiltradaVisualizar();
+        }
+
+        function aplicarSubfiltrosVisualizar() {
+            if (posicaoAtualVisualizar) {
+                renderizarListaFiltradaVisualizar();
+            }
+        }
+
+        function ativarModoSelecaoMassaToggle() {
+            modoSelecaoMassaAtivo = !modoSelecaoMassaAtivo;
+            let barra = document.getElementById('barraSelecaoMassa');
+            barra.style.display = modoSelecaoMassaAtivo ? 'flex' : 'none';
+            if (!modoSelecaoMassaAtivo) idsSelecionadosMassa.clear();
+            renderizarListaFiltradaVisualizar();
+        }
+
+        function cancelarSelecaoMassa() {
+            modoSelecaoMassaAtivo = false;
+            idsSelecionadosMassa.clear();
+            document.getElementById('barraSelecaoMassa').style.display = 'none';
+            renderizarListaFiltradaVisualizar();
+        }
+
+        function toggleSelecionarAtletaMassa(id, event) {
+            event.stopPropagation();
+            if (idsSelecionadosMassa.has(id)) idsSelecionadosMassa.delete(id);
+            else idsSelecionadosMassa.add(id);
+
+            document.getElementById('contadorSelecionadosMassa').innerText = `${idsSelecionadosMassa.size} selecionados`;
+            let card = document.getElementById(`cartao-jogador-${id}`);
+            if (card) {
+                if (idsSelecionadosMassa.has(id)) card.classList.add('selecionado-massa');
+                else card.classList.remove('selecionado-massa');
+            }
+        }
+
+        async function excluirSelecionadosMassa() {
+            if (idsSelecionadosMassa.size === 0) {
+                alert("Nenhum jogador selecionado.");
+                return;
+            }
+            if (confirm(`Tem certeza que deseja excluir os ${idsSelecionadosMassa.size} jogadores selecionados?`)) {
+                for (let id of idsSelecionadosMassa) {
+                    await deletarLocal("jogadores", id);
+                }
+                alert("Jogadores excluídos com sucesso!");
+                idsSelecionadosMassa.clear();
+                modoSelecaoMassaAtivo = false;
+                document.getElementById('barraSelecaoMassa').style.display = 'none';
+                await CacheJogadoresLocal();
+                renderizarListaFiltradaVisualizar();
+            }
+        }
+
+        async function renderizarListaFiltradaVisualizar() {
+            const container = document.getElementById('listaVisualizarContainer');
+            let termo = normalizar(posicaoAtualVisualizar);
+            let rankFiltro = document.getElementById('filtroRankVisualizar').value;
+            let timeFiltro = document.getElementById('filtroTimeVisualizar').value;
+
+            let statsPartidasLocal = await lerLocal("estatisticas_partida_jogadores");
+
+            const filtrados = jogadoresCache.filter(j => {
+                let matchPos = normalizar(j.posicao).includes(termo);
+                let rankObj = calcularRankJogador(j);
+                let matchRank = !rankFiltro || rankObj.nome === rankFiltro;
+                
+                let matchTime = true;
+                if (timeFiltro === 'sem_time') {
+                    matchTime = !j.time_id || j.time_id === '' || j.time_id === null;
+                } else if (timeFiltro) {
+                    matchTime = j.time_id && String(j.time_id) === timeFiltro;
+                }
+
+                return matchPos && matchRank && matchTime;
+            });
+
+            container.innerHTML = '';
+            if (filtrados.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#666;">Nenhum jogador encontrado com os filtros selecionados.</p>';
+                return;
+            }
+
+            filtrados.forEach(j => {
+                let numStr = j.numero ? `#${j.numero}` : '#--';
+                let timeObj = j.time_id ? timesCacheMap[String(j.time_id)] : null;
+                let nomeTime = timeObj ? timeObj.nome : 'Sem time (Agente Livre)';
+                
+                let statsList = statsPartidasLocal.filter(s => s.jogador_id === j.id);
+                let totPartidas = 0, totGols = 0, totAssisGols = 0, totAssisDef = 0, totDesarmes = 0, totDefesas = 0;
+                statsList.forEach(s => {
+                    totPartidas += (s.partidas || 0);
+                    totGols += (s.gols || 0);
+                    totAssisGols += (s.assistencias_gols || 0);
+                    totAssisDef += (s.assistencia_def || 0);
+                    totDesarmes += (s.desarmes || 0);
+                    totDefesas += (s.defesas || 0);
+                });
+
+                let posNorm = normalizar(j.posicao);
+                let statsText = '';
+                if (posNorm.includes('goleiro')) {
+                    statsText = `⚔️ Part: ${totPartidas} | 🧤 Defesas: ${totDefesas}`;
+                } else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
+                    statsText = `⚔️ Part: ${totPartidas} | 🛡️ Assis. Def: ${totAssisDef} | 🛑 Desarmes: ${totDesarmes}`;
+                } else {
+                    statsText = `⚔️ Part: ${totPartidas} | ⚽ Gols: ${totGols} | 👟 Assis: ${totAssisGols}`;
+                }
+
+                let rank = calcularRankJogador(j);
+                let estrelaHtml = j.habilidade_id ? `<span class="estrela-habilidade" title="Ver Habilidade" onclick="mostrarBalaoEstrela(event, '${j.habilidade_id}')">⭐</span>` : '';
+                let infoIdadeEnergia = `<span style="font-size:0.75rem; color:#555;">(👤 ${j.idade ?? 20}a | ⚡ ${j.energia ?? 2}/2)</span>`;
+
+                let checkboxHtml = '';
+                let classeSelecionado = '';
+                if (modoSelecaoMassaAtivo) {
+                    let marcado = idsSelecionadosMassa.has(j.id) ? 'checked' : '';
+                    if (idsSelecionadosMassa.has(j.id)) classeSelecionado = 'selecionado-massa';
+                    checkboxHtml = `<input type="checkbox" ${marcado} onclick="toggleSelecionarAtletaMassa(${j.id}, event)" style="width:18px; height:18px; margin-right:6px; cursor:pointer;">`;
+                }
+
+                container.innerHTML += `
+                    <div class="jogador-card ${classeSelecionado}" id="cartao-jogador-${j.id}" onclick="${modoSelecaoMassaAtivo ? `toggleSelecionarAtletaMassa(${j.id}, event)` : `verPerfilJogador(${JSON.stringify(j).replace(/"/g, '&quot;')})`}">
+                        ${checkboxHtml}
+                        <div class="jogador-info">
+                            <div class="jogador-topo-linha">
+                                <span class="jogador-nome">${numStr} - ${j.nome} ${estrelaHtml}</span>
+                                <span class="badge-rank" style="background-color: ${rank.cor};">${rank.nome}</span>
+                            </div>
+                            <div class="time-info-linha">
+                                <span>Time: <b>${nomeTime}</b></span>
+                                ${infoIdadeEnergia}
+                            </div>
+                            <small style="color:#2196f3; display:block; margin-top:3px;">
+                                ${statsText}
+                            </small>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // ================= PERFIL DETALHADO E HISTÓRICO =================
+        async function verPerfilJogador(j) {
+            jogadorAtualPerfil = j;
+            esconderTodosPainéis();
+            
+            let timeDoAtleta = j.time_id ? timesCacheMap[String(j.time_id)] : null;
+            let camisaSrc = (timeDoAtleta && timeDoAtleta.camisa1) ? timeDoAtleta.camisa1 : (timeDoAtleta && timeDoAtleta.escudo ? timeDoAtleta.escudo : 'https://via.placeholder.com/150');
+            document.getElementById('modalJogadorCamisa').src = camisaSrc;
+
+            let numCamisaStr = j.numero ? `Camisa #${j.numero}` : 'Sem número';
+            let nomeTimeStr = timeDoAtleta ? timeDoAtleta.nome : 'Sem time (Agente Livre)';
+            let estrelaHtml = j.habilidade_id ? ` <span class="estrela-habilidade" title="Ver Habilidade" onclick="mostrarBalaoEstrela(event, '${j.habilidade_id}')">⭐</span>` : '';
+
+            document.getElementById('modalJogadorNome').innerHTML = `${numCamisaStr} - ${j.nome}${estrelaHtml}`;
+            
+            let rank = calcularRankJogador(j);
+            document.getElementById('modalBadgeRankContainer').innerHTML = `<span class="badge-rank" style="background-color: ${rank.cor}; font-size:0.9rem; padding: 3px 12px;">${rank.nome}</span>`;
+            document.getElementById('modalJogadorDesc').innerText = `${j.desc || 'Sem biografia'} • Posição: ${j.posicao || 'Não definida'} • Time: ${nomeTimeStr}`;
+            
+            document.getElementById('modalJIdade').innerText = j.idade ?? 20;
+            document.getElementById('modalJEnergia').innerText = j.energia ?? 2;
+
+            let posNorm = normalizar(j.posicao);
+            let boxAtributos = document.getElementById('modalContainerAtributos');
+            if (posNorm.includes('goleiro')) {
+                boxAtributos.innerHTML = `<p style="margin:2px 0;">🧤 Reflexo: <b>${j.reflexo || 0}</b></p>`;
+            } else if (posNorm.includes('meia defensivo') || posNorm.includes('zagueiro')) {
+                boxAtributos.innerHTML = `<p style="margin:2px 0;">🛑 Marcação: <b>${j.marcacao || 0}</b></p>`;
+            } else {
+                boxAtributos.innerHTML = `
+                    <p style="margin:2px 0;">⚡ Velocidade: <b>${j.velocidade || 0}</b> | 🎯 Precisão: <b>${j.precisao || 0}</b></p>
+                    <p style="margin:2px 0;">👟 Assistência: <b>${j.assistencia || 0}</b></p>
+                `;
+            }
+
+            let statsPartidasLocal = await lerLocal("estatisticas_partida_jogadores");
+            let statsList = statsPartidasLocal.filter(s => s.jogador_id === j.id);
+            let pPartidas = 0, pGols = 0, pAssisGols = 0, pAssisDef = 0, pDesarmes = 0, pDefesas = 0;
+            
+            statsList.forEach(s => {
+                pPartidas += (s.partidas || 0);
+                pGols += (s.gols || 0);
+                pAssisGols += (s.assistencias_gols || 0);
+                pAssisDef += (s.assistencia_def || 0);
+                pDesarmes += (s.desarmes || 0);
+                pDefesas += (s.defesas || 0);
+            });
+
+            let boxEstatisticas = document.getElementById('modalContainerEstatisticasGerais');
+            if (posNorm.includes('goleiro')) {
+                boxEstatisticas.innerHTML = `<p style="margin:2px 0;">⚔️ Partidas: <b>${pPartidas}</b> | 🧤 Defesas: <b>${pDefesas}</b></p>`;
+            } else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
+                boxEstatisticas.innerHTML = `<p style="margin:2px 0;">⚔️ Partidas: <b>${pPartidas}</b> | 🛑 Desarmes: <b>${pDesarmes}</b> | 🛡️ Assis. Def: <b>${pAssisDef}</b></p>`;
+            } else {
+                boxEstatisticas.innerHTML = `<p style="margin:2px 0;">⚔️ Partidas: <b>${pPartidas}</b> | ⚽ Gols: <b>${pGols}</b> | 👟 Assistências: <b>${pAssisGols}</b></p>`;
+            }
+
+            let conquistasBox = document.getElementById('modalContainerMedalhas');
+            if (j.conquistas && j.conquistas.length > 0) {
+                conquistasBox.innerHTML = j.conquistas.map(c => `
+                    <div style="background:#f0f7ff; padding:4px 8px; border-radius:4px; margin-bottom:3px; border:1px solid #d0e8ff; display:flex; align-items:center; gap:6px;">
+                        <span class="icone-medalha-conquista" style="cursor:pointer; font-size:1.1rem;" onclick="mostrarBalaoMedalha(event, '${c.descricao}')">${c.icone || '🥇'}</span>
+                        <span style="font-size:0.8rem; font-weight:bold; cursor:pointer;" onclick="mostrarBalaoMedalha(event, '${c.descricao}')">${c.categoria} (${c.posicao}º Lugar)</span>
+                    </div>
+                `).join('');
+            } else {
+                conquistasBox.innerHTML = 'Nenhuma medalha conquistada ainda.';
+            }
+
+            await carregarHistoricoTemporadasJogadorLocal(j);
+
+            let valorCalculado = await calcularValorMercadoComBonus(j);
+            document.getElementById('modalJValor').innerText = `R$ ${valorCalculado.toLocaleString('pt-BR')}`;
+
+            document.getElementById('painelPerfilJogador').style.display = 'block';
+        }
+
+        async function carregarHistoricoTemporadasJogadorLocal(j) {
+            let historicoContainer = document.getElementById('modalContainerHistoricoTemporadas');
+            let detalheBox = document.getElementById('modalDetalheTemporadaBox');
+            detalheBox.style.display = 'none';
+
+            let statsPartidasLocal = await lerLocal("estatisticas_partida_jogadores");
+            let partidasLocal = await lerLocal("partidas");
+            let statsJogador = statsPartidasLocal.filter(s => s.jogador_id === j.id);
+
+            if (statsJogador.length === 0) {
+                historicoContainer.innerHTML = '<small style="color:#666;">Nenhum registro em partidas oficiais.</small>';
+                return;
+            }
+
+            let mapaTemporadas = {};
+            statsJogador.forEach(s => {
+                let partObj = partidasLocal.find(p => p.id === s.partida_id);
+                if (partObj) {
+                    let tId = partObj.temporada_id || 1;
+                    if (!mapaTemporadas[tId]) mapaTemporadas[tId] = { partidas: 0, gols: 0, assistencias_gols: 0, assistencia_defensiva: 0, desarmes: 0, defesas: 0 };
+                    mapaTemporadas[tId].partidas += (s.partidas || 0);
+                    mapaTemporadas[tId].gols += (s.gols || 0);
+                    mapaTemporadas[tId].assistencias_gols += (s.assistencias_gols || 0);
+                    mapaTemporadas[tId].assistencia_defensiva += (s.assistencia_def || 0);
+                    mapaTemporadas[tId].desarmes += (s.desarmes || 0);
+                    mapaTemporadas[tId].defesas += (s.defesas || 0);
+                }
+            });
+
+            let htmlTemp = '';
+            Object.keys(mapaTemporadas).forEach(tempId => {
+                let st = mapaTemporadas[tempId];
+                let timeDoAtletaNome = j.time_id && timesCacheMap[String(j.time_id)] ? timesCacheMap[String(j.time_id)].nome : 'Agente Livre / Sem Clube';
+
+                htmlTemp += `
+                    <div class="historico-temporada-card" onclick='exibirDetalheTemporadaJogador(${JSON.stringify(st)}, "${timeDoAtletaNome}", ${tempId})'>
+                        <b>Temporada ${tempId}</b> - ${timeDoAtletaNome} (${st.partidas} jogos)
+                    </div>
+                `;
+            });
+
+            historicoContainer.innerHTML = htmlTemp;
+        }
+
+        function exibirDetalheTemporadaJogador(st, nomeTime, tempId) {
+            let detalheBox = document.getElementById('modalDetalheTemporadaBox');
+            let tituloEl = document.getElementById('modalDetalheTempTitulo');
+            let conteudoEl = document.getElementById('modalDetalheTempConteudo');
+
+            tituloEl.innerText = `Temporada ${tempId} - Estatísticas Detalhadas`;
+            let posNorm = normalizar(jogadorAtualPerfil.posicao);
+            let statsTextoFiltro = '';
+
+            if (posNorm.includes('goleiro')) {
+                statsTextoFiltro = `🧤 Defesas: <b>${st.defesas}</b>`;
+            } else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
+                statsTextoFiltro = `🛑 Desarmes: <b>${st.desarmes}</b> | 🛡️ Assistências Defensivas: <b>${st.assistencia_defensiva}</b>`;
+            } else {
+                statsTextoFiltro = `⚽ Gols: <b>${st.gols}</b> | 👟 Assistências: <b>${st.assistencias_gols}</b>`;
+            }
+
+            conteudoEl.innerHTML = `Clube da Época: <b>${nomeTime}</b><br>Partidas: <b>${st.partidas}</b><br>${statsTextoFiltro}`;
+            detalheBox.style.display = 'block';
+        }
+
+        function fecharPerfilJogador() {
+            document.getElementById('painelPerfilJogador').style.display = 'none';
+            document.getElementById('painelVisualizar').style.display = 'block';
+        }
+
+        function iniciarEdicaoPerfilAtual() {
+            if (!jogadorAtualPerfil) return;
+            iniciarEdicao(jogadorAtualPerfil);
+        }
+
+        async function excluirJogadorPerfilAtual() {
+            if (!jogadorAtualPerfil) return;
+            if (confirm("Tem certeza que deseja excluir este jogador localmente?")) {
+                await deletarLocal("jogadores", jogadorAtualPerfil.id);
+                alert("Jogador excluído com sucesso!");
+                abrirVisualizar();
+            }
+        }
+
+        // ================= 2. SALVAR NOVO JOGADOR =================
+        async function salvarNovoJogador() {
+            const nome = document.getElementById('inputNome').value.trim();
+            const posicao = document.getElementById('inputPosicao').value;
+            const time_id = document.getElementById('inputTimeId').value ? parseInt(document.getElementById('inputTimeId').value) : null;
+            const numero = document.getElementById('inputNumero').value ? parseInt(document.getElementById('inputNumero').value) : null;
+            const idade = document.getElementById('inputidade').value ? parseInt(document.getElementById('inputidade').value) : 20;
+            const desc = document.getElementById('inputDesc').value.trim();
+            const habilidade_id = document.getElementById('inputHabilidadeId').value || null;
+
+            if (!nome) {
+                alert("Por favor, informe o nome do jogador.");
+                return;
+            }
+
+            let jogadoresLocal = await lerLocal("jogadores");
+            let novoId = jogadoresLocal.length > 0 ? Math.max(...jogadoresLocal.map(j => j.id)) + 1 : 1;
+
+            const novoJogador = {
+                id: novoId,
+                nome: nome,
+                posicao: posicao,
+                time_id: time_id,
+                numero: numero,
+                idade: idade,
+                energia: 2,
+                desc: desc,
+                habilidade_id: habilidade_id,
+                velocidade: atributosCriar.inputVel,
+                precisao: atributosCriar.inputPrec,
+                assistencia: atributosCriar.inputAssis,
+                marcacao: atributosCriar.inputMarc,
+                reflexo: atributosCriar.inputRef,
+                gols: 0,
+                partidas: 0,
+                assistencia_gols: 0,
+                assistencia_defensiva: 0,
+                desarmes: 0,
+                defesas: 0,
+                mundiais: 0,
+                regionais: 0,
+                liga: 0,
+                conquistas: [],
+                aposentado: false
+            };
+
+            await salvarLocal("jogadores", novoJogador);
+            alert("Jogador salvo localmente com sucesso!");
+            voltarMenu();
+        }
+
+        // ================= 3. EDIÇÃO INDIVIDUAL =================
+        function iniciarEdicao(j) {
+            esconderTodosPainéis();
+            document.getElementById('editId').value = j.id;
+            document.getElementById('editNome').value = j.nome;
+            document.getElementById('editPosicao').value = j.posicao || 'Goleiro';
+            document.getElementById('editNumero').value = j.numero || '';
+            document.getElementById('editidade').value = j.idade ?? 20;
+            document.getElementById('editDesc').value = j.desc || '';
+            document.getElementById('editHabilidadeId').value = j.habilidade_id || '';
+
+            atributosEditar = {
+                editVel: j.velocidade || 0,
+                editPrec: j.precisao || 0,
+                editAssis: j.assistencia || 0,
+                editMarc: j.marcacao || 0,
+                editRef: j.reflexo || 0
+            };
+
+            for (let k in atributosEditar) {
+                document.getElementById(`val${k.charAt(0).toUpperCase() + k.slice(1)}`).innerText = atributosEditar[k];
+            }
+
+            document.getElementById('formEditarIndividual').style.display = 'block';
+        }
+
+        async function salvarEdicaoJogador() {
+            const id = parseInt(document.getElementById('editId').value);
+            const novoNome = document.getElementById('editNome').value.trim();
+            const novaPosicao = document.getElementById('editPosicao').value;
+            const novoNumero = document.getElementById('editNumero').value ? parseInt(document.getElementById('editNumero').value) : null;
+            const novaIdade = document.getElementById('editidade').value ? parseInt(document.getElementById('editidade').value) : 20;
+            const novaDesc = document.getElementById('editDesc').value.trim();
+            const novaHabId = document.getElementById('editHabilidadeId').value || null;
+
+            if (!novoNome) {
+                alert("O nome não pode ficar vazio.");
+                return;
+            }
+
+            let jogadoresLocal = await lerLocal("jogadores");
+            let jObj = jogadoresLocal.find(x => x.id === id);
+            if (!jObj) return;
+
+            jObj.nome = novoNome;
+            jObj.posicao = novaPosicao;
+            jObj.numero = novoNumero;
+            jObj.idade = novaIdade;
+
+            if (novaIdade < 40) {
+                jObj.aposentado = false;
+            }
+
+            jObj.desc = novaDesc;
+            jObj.habilidade_id = novaHabId;
+            jObj.velocidade = atributosEditar.editVel;
+            jObj.precisao = atributosEditar.editPrec;
+            jObj.assistencia = atributosEditar.editAssis;
+            jObj.marcacao = atributosEditar.editMarc;
+            jObj.reflexo = atributosEditar.editRef;
+
+            await salvarLocal("jogadores", jObj);
+            alert("Jogador atualizado com sucesso!");
+            abrirVisualizar();
+        }
+
+        function cancelarEdicaoJogador() {
+            if (jogadorAtualPerfil) {
+                verPerfilJogador(jogadorAtualPerfil);
+            } else {
+                abrirVisualizar();
+            }
+        }
+
+        function mudarTela(event, destino) {
+            event.preventDefault();
+            if (window.location.pathname.includes(destino)) return;
+            document.body.style.opacity = '0';
+            setTimeout(() => { window.location.href = destino; }, 150);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rankings - Fute-Brawl</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .painel-conteudo {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin: 20px auto 80px auto;
+            text-align: left;
+        }
+        .painel-conteudo h2 {
+            color: #1565c0;
+            font-size: 1.4rem;
+            margin-top: 0;
+            text-align: center;
+        }
+        .btn-principal-ranking {
+            background-color: #e3f2fd;
+            color: #1565c0;
+            border: 2px solid #2196f3;
+            padding: 10px;
+            width: 48%;
+            font-size: 0.95rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-principal-ranking.active {
+            background-color: #2196f3;
+            color: white;
+        }
+        .btn-sub-ranking {
+            background-color: #f0f7ff;
+            color: #333;
+            border: 1px solid #90caf9;
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+        }
+        .btn-sub-ranking.active {
+            background-color: #1565c0;
+            color: white;
+            border-color: #1565c0;
+        }
+        .btn-pos-ranking {
+            background-color: #f1f8ff;
+            color: #1565c0;
+            border: 1px solid #90caf9;
+            padding: 6px 8px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+        }
+        .btn-pos-ranking.active {
+            background-color: #ff9800;
+            color: white;
+            border-color: #f57c00;
+        }
+        .tabela-container {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.75rem;
+        }
+        .tabela-container th, .tabela-container td {
+            border: 1px solid #ddd;
+            padding: 6px 4px;
+            text-align: center;
+        }
+        .tabela-container th {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+        .input-group {
+            margin-bottom: 12px;
+        }
+        .input-group label {
+            display: block;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 4px;
+            font-size: 0.85rem;
+        }
+        .input-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #90caf9;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            background-color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Fute-Brawl - Rankings</h1>
+    </header>
+
+    <main class="menu-container" style="padding: 10px;">
+        <!-- Escolha Principal: Times ou Jogadores -->
+        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+            <button class="btn-principal-ranking active" id="btnTabTimes" onclick="mudarAbaPrincipal('times')">🛡️ Ranking de Times</button>
+            <button class="btn-principal-ranking" id="btnTabJogadores" onclick="mudarAbaPrincipal('jogadores')">🏅 Ranking de Jogadores</button>
+        </div>
+
+        <!-- Abas de Abrangência (Geral ou Por Temporada) -->
+        <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+            <button class="btn-sub-ranking active" id="btnNivelGeral" onclick="mudarNivelFiltro('geral')">Geral (Vitalício)</button>
+            <button class="btn-sub-ranking" id="btnNivelTemporada" onclick="mudarNivelFiltro('temporada')">Por Temporada</button>
+        </div>
+
+        <!-- Seletor de Posições para Jogadores (AT, MO, MD, ZA, GO) -->
+        <div id="painelPosicoesJogadores" style="display: none; display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap;">
+            <button class="btn-pos-ranking active" id="btnPosAT" onclick="mudarPosicaoRanking('AT')">AT</button>
+            <button class="btn-pos-ranking" id="btnPosMO" onclick="mudarPosicaoRanking('MO')">MO</button>
+            <button class="btn-pos-ranking" id="btnPosMD" onclick="mudarPosicaoRanking('MD')">MD</button>
+            <button class="btn-pos-ranking" id="btnPosZA" onclick="mudarPosicaoRanking('ZA')">ZA</button>
+            <button class="btn-pos-ranking" id="btnPosGO" onclick="mudarPosicaoRanking('GO')">GO</button>
+        </div>
+
+        <!-- Filtros Dinâmicos (Seletor de Temporada) -->
+        <div id="painelFiltrosExtras" style="display: none; background: #f0f7ff; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+            <div class="input-group" id="grupoSelectTemporada" style="display:none; margin-bottom:0;">
+                <label>Selecionar Temporada:</label>
+                <select id="selectTemporada" onchange="carregarRankings()"></select>
+            </div>
+        </div>
+
+        <!-- Conteúdo do Ranking -->
+        <div id="containerTabelaRanking" style="overflow-x: auto;">
+            <p style="text-align: center; color: #666;">Carregando dados...</p>
+        </div>
+    </main>
+
+    <!-- Barra de Navegação Inferior -->
+    <nav class="nav-bar">
+        <a href="times.html" class="nav-btn" onclick="mudarTela(event, 'times.html')">
+            <span class="icon">🛡️</span> Times
+        </a>
+        <a href="index.html" class="nav-btn" onclick="mudarTela(event, 'index.html')">
+            <span class="icon">🏠</span> Jogos
+        </a>
+        <a href="rankings.html" class="nav-btn active" onclick="mudarTela(event, 'rankings.html')">
+            <span class="icon">🏅</span> Rankings
+        </a>
+    </nav>
+
+    <script>
+        const DB_NAME = "FuteBrawlOfflineDB";
+        const DB_VERSION = 2;
+
+        function abrirBancoLocal() {
+            return new Promise((resolve, reject) => {
+                let request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                request.onupgradeneeded = (event) => {
+                    let db = event.target.result;
+                    if (!db.objectStoreNames.contains("times")) db.createObjectStore("times", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("jogadores")) db.createObjectStore("jogadores", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("partidas")) db.createObjectStore("partidas", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("temporadas")) db.createObjectStore("temporadas", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("historico_financeiro")) db.createObjectStore("historico_financeiro", { keyPath: "id", autoIncrement: true });
+                    if (!db.objectStoreNames.contains("estatisticas_partida_jogadores")) db.createObjectStore("estatisticas_partida_jogadores", { keyPath: "id", autoIncrement: true });
+                    if (!db.objectStoreNames.contains("habilidades_custom")) db.createObjectStore("habilidades_custom", { keyPath: "id" });
+                };
+            });
+        }
+
+        async function lerLocal(storeName) {
+            let db = await abrirBancoLocal();
+            return new Promise((resolve, reject) => {
+                let transaction = db.transaction(storeName, "readonly");
+                let store = transaction.objectStore(storeName);
+                let request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => resolve([]);
+            });
+        }
+
+        let tipoAtivo = 'times'; 
+        let nivelAtivo = 'geral'; 
+        let posicaoAtiva = 'AT';
+        let cacheTimes = [];
+        let cacheJogadores = [];
+        let cacheTemporadas = [];
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            await carregarDadosBaseLocal();
+            await carregarTemporadasSelectLocal();
+            carregarRankings();
+        });
+
+        async function carregarDadosBaseLocal() {
+            cacheTimes = await lerLocal("times");
+            cacheJogadores = await lerLocal("jogadores");
+            let tempLocal = await lerLocal("temporadas");
+            tempLocal.sort((a, b) => b.id - a.id);
+            cacheTemporadas = tempLocal;
+        }
+
+        async function carregarTemporadasSelectLocal() {
+            let sel = document.getElementById('selectTemporada');
+            sel.innerHTML = '';
+            cacheTemporadas.forEach(tp => {
+                sel.innerHTML += `<option value="${tp.id}">Temporada ${tp.id} (${tp.status})</option>`;
+            });
+        }
+
+        function mudarAbaPrincipal(tipo) {
+            tipoAtivo = tipo;
+            document.getElementById('btnTabTimes').classList.toggle('active', tipo === 'times');
+            document.getElementById('btnTabJogadores').classList.toggle('active', tipo === 'jogadores');
+            document.getElementById('painelPosicoesJogadores').style.display = (tipo === 'jogadores') ? 'flex' : 'none';
+            carregarRankings();
+        }
+
+        function mudarNivelFiltro(nivel) {
+            nivelAtivo = nivel;
+            document.getElementById('btnNivelGeral').classList.toggle('active', nivel === 'geral');
+            document.getElementById('btnNivelTemporada').classList.toggle('active', nivel === 'temporada');
+
+            let painelFiltros = document.getElementById('painelFiltrosExtras');
+            let gTemp = document.getElementById('grupoSelectTemporada');
+
+            if (nivel === 'geral') {
+                painelFiltros.style.display = 'none';
+            } else if (nivel === 'temporada') {
+                painelFiltros.style.display = 'block';
+                gTemp.style.display = 'block';
+            }
+            carregarRankings();
+        }
+
+        function mudarPosicaoRanking(pos) {
+            posicaoAtiva = pos;
+            ['AT', 'MO', 'MD', 'ZA', 'GO'].forEach(p => {
+                let btn = document.getElementById(`btnPos${p}`);
+                if (btn) btn.classList.toggle('active', p === pos);
+            });
+            carregarRankings();
+        }
+
+        const normalizar = (str) => (str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/-/g, ' ').trim();
+
+        async function carregarRankings() {
+            let container = document.getElementById('containerTabelaRanking');
+            container.innerHTML = '<p style="text-align: center; color: #666;">Calculando ranking...</p>';
+
+            if (tipoAtivo === 'times') {
+                await renderizarRankingTimesLocal(container);
+            } else {
+                await renderizarRankingJogadoresLocal(container);
+            }
+        }
+
+        // ================= RANKING DE TIMES =================
+        async function renderizarRankingTimesLocal(container) {
+            if (nivelAtivo === 'geral') {
+                let ranking = [...cacheTimes].sort((a, b) => {
+                    let ptsA = ((a.vitorias || 0) * 3) + (a.empates || 0);
+                    let ptsB = ((b.vitorias || 0) * 3) + (b.empates || 0);
+                    let sgA = (a.gols_pro || 0) - (a.gols_contra || 0);
+                    let sgB = (b.gols_pro || 0) - (b.gols_contra || 0);
+                    return ptsB - ptsA || (b.vitorias || 0) - (a.vitorias || 0) || sgB - sgA || (b.gols_pro || 0) - (a.gols_pro || 0);
+                });
+                container.innerHTML = montarTabelaTimesHTML(ranking, "Ranking Geral de Times (Vitalício)");
+            } 
+            else if (nivelAtivo === 'temporada') {
+                let tempId = parseInt(document.getElementById('selectTemporada').value);
+                let dados = await calcularEstatisticasTemporadaTimesLocal(tempId);
+                container.innerHTML = montarTabelaTimesHTML(dados, "Ranking da Temporada (Times)");
+            }
+        }
+
+        function montarTabelaTimesHTML(ranking, titulo) {
+            let html = titulo ? `<h3 style="color:#1565c0; font-size:1rem; text-align:center; margin-bottom:10px;">${titulo}</h3>` : '';
+            html += `
+                <table class="tabela-container">
+                    <thead>
+                        <tr><th>#</th><th>Time</th><th>Pts</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th></tr>
+                    </thead>
+                    <tbody>
+            `;
+            if (!ranking || ranking.length === 0) {
+                html += `<tr><td colspan="9">Nenhum registro encontrado.</td></tr>`;
+            } else {
+                ranking.forEach((t, idx) => {
+                    let pts = (t.vitorias || 0) * 3 + (t.empates || 0);
+                    let jogos = (t.vitorias || 0) + (t.empates || 0) + (t.derrotas || 0);
+                    html += `<tr><td>${idx + 1}º</td><td style="text-align:left;">${t.nome}</td><td><b>${pts}</b></td><td>${jogos}</td><td>${t.vitorias || 0}</td><td>${t.empates || 0}</td><td>${t.derrotas || 0}</td><td>${t.gols_pro || 0}</td><td>${t.gols_contra || 0}</td></tr>`;
+                });
+            }
+            html += `</tbody></table>`;
+            return html;
+        }
+
+        async function calcularEstatisticasTemporadaTimesLocal(tempId) {
+            let partidasLocal = await lerLocal("partidas");
+            let partidasTemp = partidasLocal.filter(p => p.temporada_id === tempId && p.status === 'concluido');
+            let mapa = {};
+            cacheTimes.forEach(t => { mapa[t.id] = { id: t.id, nome: t.nome, vitorias: 0, empates: 0, derrotas: 0, gols_pro: 0, gols_contra: 0 }; });
+
+            partidasTemp.forEach(p => {
+                let tA = mapa[p.time_a_id];
+                let tB = mapa[p.time_b_id];
+                if (tA && tB) {
+                    tA.gols_pro += (p.gols_a || 0); tA.gols_contra += (p.gols_b || 0);
+                    tB.gols_pro += (p.gols_b || 0); tB.gols_contra += (p.gols_a || 0);
+                    if (p.gols_a > p.gols_b) { tA.vitorias++; tB.derrotas++; }
+                    else if (p.gols_b > p.gols_a) { tB.vitorias++; tA.derrotas++; }
+                    else { tA.empates++; tB.empates++; }
+                }
+            });
+
+            return Object.values(mapa).sort((a, b) => {
+                let ptsA = (a.vitorias * 3) + a.empates;
+                let ptsB = (b.vitorias * 3) + b.empates;
+                let sgA = a.gols_pro - a.gols_contra;
+                let sgB = b.gols_pro - b.gols_contra;
+                return ptsB - ptsA || b.vitorias - a.vitorias || sgB - sgA || b.gols_pro - a.gols_pro;
+            });
+        }
+
+
+        // ================= RANKING DE JOGADORES =================
+        async function renderizarRankingJogadoresLocal(container) {
+            let statsLocal = await lerLocal("estatisticas_partida_jogadores");
+            let partidasLocal = await lerLocal("partidas");
+
+            let idsPartidasFiltro = new Set();
+            if (nivelAtivo === 'temporada') {
+                let tempId = parseInt(document.getElementById('selectTemporada').value);
+                partidasLocal.filter(p => p.temporada_id === tempId && p.status === 'concluido').forEach(p => idsPartidasFiltro.add(p.id));
+            }
+
+            let mapaJogadores = {};
+            cacheJogadores.forEach(j => {
+                let pNorm = normalizar(j.posicao);
+                let atendePosicao = false;
+
+                if (posicaoAtiva === 'AT' && pNorm.includes('atacante')) atendePosicao = true;
+                else if (posicaoAtiva === 'MO' && (pNorm.includes('meia ofensivo') || (pNorm.includes('meia') && !pNorm.includes('defensivo')))) atendePosicao = true;
+                else if (posicaoAtiva === 'MD' && pNorm.includes('meia defensivo')) atendePosicao = true;
+                else if (posicaoAtiva === 'ZA' && pNorm.includes('zagueiro')) atendePosicao = true;
+                else if (posicaoAtiva === 'GO' && pNorm.includes('goleiro')) atendePosicao = true;
+
+                if (atendePosicao) {
+                    let tObj = timesCacheMap ? timesCacheMap[String(j.time_id)] : null;
+                    mapaJogadores[j.id] = {
+                        id: j.id,
+                        nome: j.nome,
+                        timeNome: tObj ? tObj.nome : 'Sem clube',
+                        gols: 0,
+                        assistencias: 0,
+                        desarmes: 0,
+                        assistencias_def: 0,
+                        defesas: 0,
+                        partidas: 0
+                    };
+                }
+            });
+
+            statsLocal.forEach(s => {
+                if (nivelAtivo === 'temporada' && !idsPartidasFiltro.has(s.partida_id)) return;
+                let j = mapaJogadores[s.jogador_id];
+                if (j) {
+                    j.gols += (s.gols || 0);
+                    j.assistencias += (s.assistencias_gols || 0);
+                    j.desarmes += (s.desarmes || 0);
+                    j.assistencias_def += (s.assistencia_def || 0);
+                    j.defesas += (s.defesas || 0);
+                    j.partidas += (s.partidas || 0);
+                }
+            });
+
+            let lista = Object.values(mapaJogadores);
+
+            // Regras estritas de ordenação por posição
+            if (posicaoAtiva === 'AT' || posicaoAtiva === 'MO') {
+                lista.sort((a,b) => b.gols - a.gols || b.assistencias - a.assistencias || b.partidas - a.partidas);
+                container.innerHTML = montarTabelaJogadoresHTML(lista, `Ranking ${posicaoAtiva} (${nivelAtivo === 'geral' ? 'Geral' : 'Temporada'})`, ['Gols', 'Assistências', 'Partidas']);
+            } else if (posicaoAtiva === 'MD' || posicaoAtiva === 'ZA') {
+                lista.sort((a,b) => b.desarmes - a.desarmes || b.assistencias_def - a.assistencias_def || b.partidas - a.partidas);
+                container.innerHTML = montarTabelaJogadoresHTML(lista, `Ranking ${posicaoAtiva} (${nivelAtivo === 'geral' ? 'Geral' : 'Temporada'})`, ['Desarmes', 'Assis. Def', 'Partidas']);
+            } else if (posicaoAtiva === 'GO') {
+                lista.sort((a,b) => b.defesas - a.defesas || b.partidas - a.partidas);
+                container.innerHTML = montarTabelaJogadoresHTML(lista, `Ranking ${posicaoAtiva} (${nivelAtivo === 'geral' ? 'Geral' : 'Temporada'})`, ['Defesas', 'Partidas']);
+            }
+        }
+
+        function montarTabelaJogadoresHTML(ranking, titulo, colunasMetricas) {
+            let html = titulo ? `<h3 style="color:#1565c0; font-size:1rem; text-align:center; margin-bottom:10px;">${titulo}</h3>` : '';
+            html += `
+                <table class="tabela-container">
+                    <thead>
+                        <tr><th>#</th><th>Jogador</th><th>Time</th><th>${colunasMetricas[0]}</th>${colunasMetricas[1] ? `<th>${colunasMetricas[1]}</th>` : ''}${colunasMetricas[2] ? `<th>${colunasMetricas[2]}</th>` : ''}</tr>
+                    </thead>
+                    <tbody>
+            `;
+            if (!ranking || ranking.length === 0) {
+                html += `<tr><td colspan="5">Nenhum registro encontrado nesta categoria.</td></tr>`;
+            } else {
+                ranking.forEach((j, idx) => {
+                    let m1 = 0, m2 = 0, m3 = 0;
+                    if (posicaoAtiva === 'AT' || posicaoAtiva === 'MO') { m1 = j.gols; m2 = j.assistencias; m3 = j.partidas; }
+                    else if (posicaoAtiva === 'MD' || posicaoAtiva === 'ZA') { m1 = j.desarmes; m2 = j.assistencias_def; m3 = j.partidas; }
+                    else if (posicaoAtiva === 'GO') { m1 = j.defesas; m2 = j.partidas; }
+
+                    html += `<tr><td>${idx + 1}º</td><td style="text-align:left;">${j.nome}</td><td style="text-align:left; color:#555;"><small>${j.timeNome}</small></td><td><b>${m1}</b></td><td>${m2}</td>${colunasMetricas[2] ? `<td>${m3}</td>` : ''}</tr>`;
+                });
+            }
+            html += `</tbody></table>`;
+            return html;
+        }
+
+        let timesCacheMap = {};
+        async function carregarCacheTimesLocal() {
+            let timesLocal = await lerLocal("times");
+            timesCacheMap = {};
+            if (timesLocal) timesLocal.forEach(t => timesCacheMap[String(t.id)] = t);
+        }
+
+        async function carregarDadosBaseLocal() {
+            cacheTimes = await lerLocal("times");
+            cacheJogadores = await lerLocal("jogadores");
+            let tempLocal = await lerLocal("temporadas");
+            tempLocal.sort((a, b) => b.id - a.id);
+            cacheTemporadas = tempLocal;
+            await carregarCacheTimesLocal();
+        }
+
+        function mudarTela(event, destino) {
+            event.preventDefault();
+            if (window.location.pathname.includes(destino)) return;
+            document.body.style.opacity = '0';
+            setTimeout(() => { window.location.href = destino; }, 150);
+        }
+    </script>
+</body>
+</html>
