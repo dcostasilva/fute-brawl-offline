@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        body {
+            overscroll-behavior-y: none; /* Bloqueia o recarregamento de puxar para baixo no mobile */
+        }
         .painel-conteudo {
             display: none;
             background: white;
@@ -689,24 +692,31 @@
             });
         }
 
+        // FUNÇÃO ATUALIZADA: Permite abertura 100% offline e sincroniza em segundo plano se houver internet
         async function inicializarOuSincronizarDadosLocal() {
             let timesLocais = await lerLocal("times");
             if (!timesLocais || timesLocais.length === 0) {
-                const [resTimes, resJog, resPart, resTemp, resHist, resStat] = await Promise.all([
-                    _supabase.from('times').select('*'),
-                    _supabase.from('jogadores').select('*'),
-                    _supabase.from('partidas').select('*'),
-                    _supabase.from('temporadas').select('*'),
-                    _supabase.from('historico_financeiro').select('*'),
-                    _supabase.from('estatisticas_partida_jogadores').select('*')
-                ]);
+                try {
+                    const [resTimes, resJog, resPart, resTemp, resHist, resStat] = await Promise.all([
+                        _supabase.from('times').select('*'),
+                        _supabase.from('jogadores').select('*'),
+                        _supabase.from('partidas').select('*'),
+                        _supabase.from('temporadas').select('*'),
+                        _supabase.from('historico_financeiro').select('*'),
+                        _supabase.from('estatisticas_partida_jogadores').select('*')
+                    ]);
 
-                if (resTimes.data) await salvarLocal("times", resTimes.data);
-                if (resJog.data) await salvarLocal("jogadores", resJog.data);
-                if (resPart.data) await salvarLocal("partidas", resPart.data);
-                if (resTemp.data) await salvarLocal("temporadas", resTemp.data);
-                if (resHist.data) await salvarLocal("historico_financeiro", resHist.data);
-                if (resStat.data) await salvarLocal("estatisticas_partida_jogadores", resStat.data);
+                    if (resTimes.data && resTimes.data.length > 0) {
+                        await salvarLocal("times", resTimes.data);
+                        if (resJog.data) await salvarLocal("jogadores", resJog.data);
+                        if (resPart.data) await salvarLocal("partidas", resPart.data);
+                        if (resTemp.data) await salvarLocal("temporadas", resTemp.data);
+                        if (resHist.data) await salvarLocal("historico_financeiro", resHist.data);
+                        if (resStat.data) await salvarLocal("estatisticas_partida_jogadores", resStat.data);
+                    }
+                } catch (e) {
+                    console.warn("Sem conexão com a internet ou Supabase indisponível. Abrindo em modo totalmente offline.");
+                }
             }
         }
 
@@ -1653,7 +1663,6 @@
             let rankFiltro = document.getElementById('filtroRankCardapio')?.value || '';
             let timeFiltro = document.getElementById('filtroTimeCardapio')?.value || '';
 
-            // Pré-carrega o mapa de bônus do Top 10 da temporada anterior UMA ÚNICA VEZ
             let bonusRankingMap = await construirMapaBonusRankingTemporadaAnterior();
 
             const filtrados = [];
@@ -1929,7 +1938,6 @@
             document.getElementById('painelHistoricoFinancas').style.display = 'block';
         }
 
-        // NOVO FORMATO DE EXTRATO FINANCEIRO SOLICITADO
         async function renderizarExtratoFinancasLocal() {
             let filtro = document.getElementById('filtroFinancas').value;
             let container = document.getElementById('listaExtratoFinancas');
@@ -1949,7 +1957,6 @@
             let saldoRodando = 100000;
             let htmlExtrato = '';
             
-            // Recalcula o saldo rodando histórico para cada transação
             let transacoesProcessadas = [];
             historicoLocal.filter(h => h.time_id === currentTimeId).sort((a,b) => a.id - b.id).forEach(f => {
                 if (f.tipo === 'ganho') saldoRodando += (f.valor || 0);

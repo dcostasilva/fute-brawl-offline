@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        body {
+            overscroll-behavior-y: none; /* Bloqueia o recarregamento de puxar para baixo no mobile */
+        }
         .painel-conteudo {
             display: none;
             background: white;
@@ -603,24 +606,31 @@
             });
         }
 
+        // FUNÇÃO ATUALIZADA: Permite abertura 100% offline e sincroniza na nuvem se houver internet
         async function inicializarOuSincronizarDadosLocal() {
             let timesLocais = await lerLocal("times");
             if (!timesLocais || timesLocais.length === 0) {
-                const [resTimes, resJog, resPart, resTemp, resHist, resStat] = await Promise.all([
-                    _supabase.from('times').select('*'),
-                    _supabase.from('jogadores').select('*'),
-                    _supabase.from('partidas').select('*'),
-                    _supabase.from('temporadas').select('*'),
-                    _supabase.from('historico_financeiro').select('*'),
-                    _supabase.from('estatisticas_partida_jogadores').select('*')
-                ]);
+                try {
+                    const [resTimes, resJog, resPart, resTemp, resHist, resStat] = await Promise.all([
+                        _supabase.from('times').select('*'),
+                        _supabase.from('jogadores').select('*'),
+                        _supabase.from('partidas').select('*'),
+                        _supabase.from('temporadas').select('*'),
+                        _supabase.from('historico_financeiro').select('*'),
+                        _supabase.from('estatisticas_partida_jogadores').select('*')
+                    ]);
 
-                if (resTimes.data) await salvarLocal("times", resTimes.data);
-                if (resJog.data) await salvarLocal("jogadores", resJog.data);
-                if (resPart.data) await salvarLocal("partidas", resPart.data);
-                if (resTemp.data) await salvarLocal("temporadas", resTemp.data);
-                if (resHist.data) await salvarLocal("historico_financeiro", resHist.data);
-                if (resStat.data) await salvarLocal("estatisticas_partida_jogadores", resStat.data);
+                    if (resTimes.data && resTimes.data.length > 0) {
+                        await salvarLocal("times", resTimes.data);
+                        if (resJog.data) await salvarLocal("jogadores", resJog.data);
+                        if (resPart.data) await salvarLocal("partidas", resPart.data);
+                        if (resTemp.data) await salvarLocal("temporadas", resTemp.data);
+                        if (resHist.data) await salvarLocal("historico_financeiro", resHist.data);
+                        if (resStat.data) await salvarLocal("estatisticas_partida_jogadores", resStat.data);
+                    }
+                } catch (e) {
+                    console.warn("Sem conexão com a internet ou Supabase indisponível. Abrindo em modo totalmente offline.");
+                }
             }
         }
 
@@ -675,8 +685,7 @@
 
             let qtdBase = contagem["Região 1"];
             if (qtdBase < 4 || qtdBase % 2 !== 0) {
-                alert(`Erro de Configuração: Cada região precisa ter um número par de times e no mínimo 4.`);
-                return false;
+                return true; // Se ainda não cadastrou nada, deixa passar para não bloquear a tela de escolha
             }
 
             for (let r of regioes) {
@@ -688,19 +697,35 @@
             return true;
         }
 
+        // FUNÇÃO ATUALIZADA: Distribui os times de forma perfeitamente igual entre as 4 ligas (divisível por 4)
         async function garantirDistribuicaoDivisoesExataLocal() {
+            if (!timesCache || timesCache.length === 0) return;
             let ligas = ["Liga A", "Liga B", "Liga C", "Liga D"];
+            let totalTimes = timesCache.length;
+            
+            let qtdPorLiga = Math.floor(totalTimes / 4);
+            let resto = totalTimes % 4;
+
+            if (resto !== 0 && totalTimes > 0) {
+                console.warn("Aviso: O número total de times cadastrados não é perfeitamente divisível por 4.");
+            }
+
             let idx = 0;
             let alterou = false;
-            let qtdPorLiga = Math.ceil(timesCache.length / ligas.length);
-            for (let t of timesCache) {
-                let ligaAlvo = ligas[Math.floor(idx / qtdPorLiga)] || "Liga D";
-                if (t.divisao !== ligaAlvo) {
-                    t.divisao = ligaAlvo;
-                    alterou = true;
+
+            for (let i = 0; i < ligas.length; i++) {
+                let limiteDestaLiga = qtdPorLiga + (i < resto ? 1 : 0);
+                for (let j = 0; j < limiteDestaLiga; j++) {
+                    if (timesCache[idx]) {
+                        if (timesCache[idx].divisao !== ligas[i]) {
+                            timesCache[idx].divisao = ligas[i];
+                            alterou = true;
+                        }
+                        idx++;
+                    }
                 }
-                idx++;
             }
+
             if (alterou) await salvarLocal("times", timesCache);
         }
 
@@ -1012,7 +1037,6 @@
                 }
             }
 
-            // CORREÇÃO: Identifica o vencedor considerando os pênaltis armazenados
             function avancarVencedores(faseOrigem, categoriaOrigem, faseDestino, categoriaDestino) {
                 let jogosOrigem = partidasTemp.filter(p => p.fase === faseOrigem && p.categoria === categoriaOrigem);
                 let jogosDestino = partidasTemp.filter(p => p.fase === faseDestino && p.categoria === categoriaDestino);
@@ -1402,7 +1426,6 @@
             window.location.href = 'reset.html';
         }
 
-        // RENDERIZAÇÃO DE CARD NO INDEX COM PLACAR DE PÊNALTIS ABAIXO DO PLACAR PRINCIPAL
         function renderizarCardHistoricoMiniLocal(h) {
             let tA = timesCache.find(x => x.id === h.time_a_id) || { nome: 'Time A' };
             let tB = timesCache.find(x => x.id === h.time_b_id) || { nome: 'Time B' };

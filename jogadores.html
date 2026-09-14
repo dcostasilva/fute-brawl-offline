@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        body {
+            overscroll-behavior-y: none; /* Bloqueia o recarregamento de puxar para baixo no mobile */
+        }
         .painel-conteudo {
             display: none;
             background: white;
@@ -650,6 +653,34 @@
             });
         }
 
+        // FUNÇÃO ATUALIZADA: Permite abertura 100% offline e sincroniza na nuvem se houver internet
+        async function inicializarOuSincronizarDadosLocal() {
+            let timesLocais = await lerLocal("times");
+            if (!timesLocais || timesLocais.length === 0) {
+                try {
+                    const [resTimes, resJog, resPart, resTemp, resHist, resStat] = await Promise.all([
+                        _supabase.from('times').select('*'),
+                        _supabase.from('jogadores').select('*'),
+                        _supabase.from('partidas').select('*'),
+                        _supabase.from('temporadas').select('*'),
+                        _supabase.from('historico_financeiro').select('*'),
+                        _supabase.from('estatisticas_partida_jogadores').select('*')
+                    ]);
+
+                    if (resTimes.data && resTimes.data.length > 0) {
+                        await salvarLocal("times", resTimes.data);
+                        if (resJog.data) await salvarLocal("jogadores", resJog.data);
+                        if (resPart.data) await salvarLocal("partidas", resPart.data);
+                        if (resTemp.data) await salvarLocal("temporadas", resTemp.data);
+                        if (resHist.data) await salvarLocal("historico_financeiro", resHist.data);
+                        if (resStat.data) await salvarLocal("estatisticas_partida_jogadores", resStat.data);
+                    }
+                } catch (e) {
+                    console.warn("Sem conexão com a internet ou Supabase indisponível. Abrindo em modo totalmente offline.");
+                }
+            }
+        }
+
         let timesCacheMap = {};
         let jogadoresCache = [];
         let posicaoAtualVisualizar = '';
@@ -658,6 +689,7 @@
         let idsSelecionadosMassa = new Set();
 
         document.addEventListener("DOMContentLoaded", async () => {
+            await inicializarOuSincronizarDadosLocal();
             await carregarCacheTimesLocal();
             CacheJogadoresLocal();
             popularSelectHabilidades();
@@ -739,7 +771,6 @@
             return { nome: 'Rank nacional', cor: '#000000', pts: 7 };
         }
 
-        // TABELA DE VALORES BASE POR POSIÇÃO E RANK
         function getBaseValorRank(posNorm, rankName) {
             if (posNorm.includes('goleiro')) {
                 switch(rankName) {
@@ -799,7 +830,6 @@
             }
         }
 
-        // MAPA DE BÔNUS DO TOP 10 DA TEMPORADA ANTERIOR
         async function construirMapaBonusRankingTemporadaAnterior() {
             let bonusMap = {};
             try {
@@ -807,7 +837,7 @@
                 let tempAtiva = temporadasLocal.find(t => t.status === 'em_andamento') || temporadasLocal[temporadasLocal.length - 1];
                 let tempIdAtiva = tempAtiva ? tempAtiva.id : 1;
 
-                if (tempIdAtiva <= 1) return bonusMap; // Temporada 1 não aplica bônus de rank anterior
+                if (tempIdAtiva <= 1) return bonusMap;
 
                 let prevTempId = tempIdAtiva - 1;
                 let partidasLocal = await lerLocal("partidas");
@@ -846,8 +876,8 @@
                     lista.sort(ordenarRank);
                     let top10 = lista.slice(0, 10);
                     top10.forEach((x, idx) => {
-                        let posicaoRanking = idx + 1; // 1º ao 10º
-                        let bonus = (11 - posicaoRanking) * 500000; // 10º = 500k ... 1º = 5M
+                        let posicaoRanking = idx + 1;
+                        let bonus = (11 - posicaoRanking) * 500000;
                         bonusMap[x.jogador.id] = bonus;
                     });
                 });
@@ -863,7 +893,7 @@
             let base = getBaseValorRank(posNorm, rank.nome);
 
             if (j.habilidade_id) {
-                base += 3000000; // Adicional de +3.000.000 para habilidade
+                base += 3000000;
             }
 
             let bonusMap = await construirMapaBonusRankingTemporadaAnterior();
@@ -954,9 +984,9 @@
             atributosCriar = { inputVel: 0, inputPrec: 0, inputAssis: 0, inputMarc: 0, inputRef: 0 };
 
             if (posNorm.includes('goleiro')) {
-                atributosCriar.inputRef = Math.floor(Math.random() * 7); // 0 a 6
+                atributosCriar.inputRef = Math.floor(Math.random() * 7);
             } else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
-                atributosCriar.inputMarc = Math.floor(Math.random() * 7); // 0 a 6
+                atributosCriar.inputMarc = Math.floor(Math.random() * 7);
             } else {
                 atributosCriar.inputVel = Math.floor(Math.random() * 7);
                 atributosCriar.inputPrec = Math.floor(Math.random() * 7);
@@ -1011,7 +1041,7 @@
             sortearNome('inputNome');
             document.getElementById('inputDesc').value = '';
             document.getElementById('inputNumero').value = Math.floor(Math.random() * 90) + 1;
-            document.getElementById('inputidade').value = Math.floor(Math.random() * 5) + 16; // 16 a 20
+            document.getElementById('inputidade').value = Math.floor(Math.random() * 5) + 16;
             document.getElementById('inputPosicao').value = 'Goleiro';
             document.getElementById('inputTimeId').value = '';
             document.getElementById('inputHabilidadeId').value = '';
@@ -1074,7 +1104,7 @@
                     posicao: posicao,
                     time_id: null,
                     numero: Math.floor(Math.random() * 90) + 1,
-                    idade: Math.floor(Math.random() * 5) + 16, // 16 a 20
+                    idade: Math.floor(Math.random() * 5) + 16,
                     energia: 2,
                     desc: "Atleta gerado em massa automaticamente.",
                     habilidade_id: null,
