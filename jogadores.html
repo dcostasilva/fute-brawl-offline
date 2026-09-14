@@ -561,8 +561,25 @@
         const DB_NAME = "FuteBrawlOfflineDB";
         const DB_VERSION = 2;
 
-        const listaNomes = ["Lucas", "Gabriel", "Matheus", "Guilherme", "Rafael", "Bruno", "Felipe", "Thiago", "Vinicius", "Leonardo", "Rodrigo", "Gustavo", "Daniel", "Carlos", "Diego", "Eduardo", "Marcos", "Alex", "Pedro", "João"];
-        const listaSobrenomes = ["Silva", "Santos", "Oliveira", "Souza", "Rodrigues", "Ferreira", "Alves", "Pereira", "Lima", "Gomes", "Costa", "Ribeiro", "Martins", "Carvalho", "Almeida", "Lopes", "Soares", "Barbosa", "Rocha", "Dias"];
+        const listaNomes = [
+            "Lucas", "Gabriel", "Matheus", "Guilherme", "Rafael", "Bruno", "Felipe", "Thiago", "Vinicius", "Leonardo", 
+            "Rodrigo", "Gustavo", "Daniel", "Carlos", "Diego", "Eduardo", "Marcos", "Alex", "Pedro", "João",
+            "Arthur", "Bernardo", "Enzo", "Lorenzo", "Heitor", "Davi", "Pietro", "Theo", "Noah", "Samuel",
+            "Benjamin", "Ian", "Levi", "Isaac", "Anthony", "Joaquim", "Vitor", "Vicente", "Bryan", "Gael",
+            "Murilo", "Augusto", "Otávio", "Benício", "Calebe", "Breno", "Caio", "Dante", "Emanuel", "Feliciano",
+            "Frederico", "Humberto", "Igor", "Jonas", "Kaique", "Leandro", "Marcelo", "Murilo", "Nelson", "Otávio",
+            "Paulo", "Renato", "Samuel", "Tales", "Ulisses", "Vagner", "Wagner", "Yuri", "Zeca", "Afonso",
+            "Alan", "Alexandre", "Anderson", "André", "Antônio", "Ariel", "Beto", "Caetano", "Cesar", "Claudio",
+            "Cristiano", "Danilo", "Dario", "Dener", "Douglas", "Edson", "Elivelton", "Erick", "Fabiano", "Fabio",
+            "Flavio", "Geovanni", "Gilberto", "Giovanni", "Haroldo", "Helio", "Higor", "Hudson", "Iran", "Italo"
+        ];
+        
+        const listaSobrenomes = [
+            "Silva", "Santos", "Oliveira", "Souza", "Rodrigues", "Ferreira", "Alves", "Pereira", "Lima", "Gomes", 
+            "Costa", "Ribeiro", "Martins", "Carvalho", "Almeida", "Lopes", "Soares", "Barbosa", "Rocha", "Dias",
+            "Nascimento", "Araújo", "Cavalcanti", "Melo", "Cardoso", "Reis", "Fernandes", "Gonçalves", "Vieira", "Barbosa",
+            "Mendes", "Ramos", "Freitas", "Monteiro", "Moraes", "Barros", "Farias", "Campos", "Cavalcante", "Duarte"
+        ];
 
         const fallbackHabilidadesDesc = {
             "at_1": "+4 de bônus na velocidade.",
@@ -653,7 +670,6 @@
             });
         }
 
-        // FUNÇÃO ATUALIZADA: Permite abertura 100% offline e sincroniza na nuvem se houver internet
         async function inicializarOuSincronizarDadosLocal() {
             let timesLocais = await lerLocal("times");
             if (!timesLocais || timesLocais.length === 0) {
@@ -970,8 +986,41 @@
             if (btn) btn.style.display = 'inline-block';
         }
 
-        function sortearNome(elementId = 'inputNome') {
-            let nomeR = listaNomes[Math.floor(Math.random() * listaNomes.length)];
+        // VERIFICA SE O PRIMEIRO NOME JÁ APARECE 3 OU MAIS VEZES NO BANCO
+        async function contarPrimeiroNomeNoBanco(primeiroNome) {
+            let jogadoresLocal = await lerLocal("jogadores");
+            let pNorm = normalizar(primeiroNome);
+            let contagem = 0;
+            jogadoresLocal.forEach(j => {
+                let pNomeCadastrado = normalizar((j.nome || '').split(' ')[0]);
+                if (pNomeCadastrado === pNorm) {
+                    contagem++;
+                }
+            });
+            return contagem;
+        }
+
+        // SORTEADOR DE NOME COM FILTRO DE NO MÁXIMO 3 REPETIÇÕES
+        async function sortearNome(elementId = 'inputNome') {
+            let jogadoresLocal = await lerLocal("jogadores");
+            let contagemNomes = {};
+            
+            jogadoresLocal.forEach(j => {
+                let pNome = normalizar((j.nome || '').split(' ')[0]);
+                if (pNome) {
+                    contagemNomes[pNome] = (contagemNomes[pNome] || 0) + 1;
+                }
+            });
+
+            // Filtra nomes da lista que aparecem menos de 3 vezes
+            let nomesValidos = listaNomes.filter(n => (contagemNomes[normalizar(n)] || 0) < 3);
+
+            // Fallback caso todos os nomes da lista base já tenham estourado o limite
+            if (nomesValidos.length === 0) {
+                nomesValidos = listaNomes;
+            }
+
+            let nomeR = nomesValidos[Math.floor(Math.random() * nomesValidos.length)];
             let sobrenomeR = listaSobrenomes[Math.floor(Math.random() * listaSobrenomes.length)];
             let campo = document.getElementById(elementId);
             if (campo) campo.value = `${nomeR} ${sobrenomeR}`;
@@ -1038,7 +1087,7 @@
             esconderTodosPainéis();
             await carregarCacheTimesLocal();
             document.getElementById('formCriarJogador').style.display = 'block';
-            sortearNome('inputNome');
+            await sortearNome('inputNome');
             document.getElementById('inputDesc').value = '';
             document.getElementById('inputNumero').value = Math.floor(Math.random() * 90) + 1;
             document.getElementById('inputidade').value = Math.floor(Math.random() * 5) + 16;
@@ -1054,6 +1103,7 @@
             document.getElementById('formCriarEmMassa').style.display = 'block';
         }
 
+        // CRIAÇÃO EM MASSA COM VERIFICAÇÃO DE NO MÁXIMO 3 REPETIÇÕES POR PRIMEIRO NOME
         async function executarCriacaoEmMassa() {
             let posicao = document.getElementById('massaPosicao').value;
             let rankDesejado = document.getElementById('massaRank').value;
@@ -1072,13 +1122,29 @@
             let maiorId = jogadoresLocal.length > 0 ? Math.max(...jogadoresLocal.map(j => j.id)) : 0;
             let novosAtletas = [];
 
+            // Mapeia contagem atual de primeiros nomes no banco
+            let contagemNomesMassa = {};
+            jogadoresLocal.forEach(j => {
+                let pNome = normalizar((j.nome || '').split(' ')[0]);
+                if (pNome) contagemNomesMassa[pNome] = (contagemNomesMassa[pNome] || 0) + 1;
+            });
+
             let posNorm = normalizar(posicao);
 
             for (let i = 0; i < quantidade; i++) {
                 maiorId++;
-                let nomeR = listaNomes[Math.floor(Math.random() * listaNomes.length)];
+
+                // Filtra nomes disponíveis com menos de 3 utilizações
+                let nomesValidos = listaNomes.filter(n => (contagemNomesMassa[normalizar(n)] || 0) < 3);
+                if (nomesValidos.length === 0) nomesValidos = listaNomes;
+
+                let nomeR = nomesValidos[Math.floor(Math.random() * nomesValidos.length)];
                 let sobrenomeR = listaSobrenomes[Math.floor(Math.random() * listaSobrenomes.length)];
                 let nomeCompleto = `${nomeR} ${sobrenomeR}`;
+
+                // Atualiza contagem local para a massa
+                let pNormNome = normalizar(nomeR);
+                contagemNomesMassa[pNormNome] = (contagemNomesMassa[pNormNome] || 0) + 1;
 
                 let vel = 0, prec = 0, assis = 0, marc = 0, ref = 0;
 
@@ -1456,9 +1522,9 @@
             }
         }
 
-        // ================= 2. SALVAR NOVO JOGADOR =================
+        // ================= 2. SALVAR NOVO JOGADOR COM VERIFICAÇÃO DE NOME =================
         async function salvarNovoJogador() {
-            const nome = document.getElementById('inputNome').value.trim();
+            const nomeInput = document.getElementById('inputNome').value.trim();
             const posicao = document.getElementById('inputPosicao').value;
             const time_id = document.getElementById('inputTimeId').value ? parseInt(document.getElementById('inputTimeId').value) : null;
             const numero = document.getElementById('inputNumero').value ? parseInt(document.getElementById('inputNumero').value) : null;
@@ -1466,8 +1532,16 @@
             const desc = document.getElementById('inputDesc').value.trim();
             const habilidade_id = document.getElementById('inputHabilidadeId').value || null;
 
-            if (!nome) {
+            if (!nomeInput) {
                 alert("Por favor, informe o nome do jogador.");
+                return;
+            }
+
+            let primeiroNome = nomeInput.split(' ')[0];
+            let qtdNoBanco = await contarPrimeiroNomeNoBanco(primeiroNome);
+
+            if (qtdNoBanco >= 3) {
+                alert(`⚠️ Atenção: Já existem muitos jogadores cadastrados com o primeiro nome "${primeiroNome}" (3 ou mais). Por favor, escolha um nome diferente para evitar repetições excessivas.`);
                 return;
             }
 
@@ -1476,7 +1550,7 @@
 
             const novoJogador = {
                 id: novoId,
-                nome: nome,
+                nome: nomeInput,
                 posicao: posicao,
                 time_id: time_id,
                 numero: numero,
