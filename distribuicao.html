@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distribuição Inicial de Elencos - Fute-Arena</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            overscroll-behavior-y: none;
+            background-color: #f4f6f8;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .painel-conteudo {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            margin: 20px auto;
+            text-align: center;
+        }
+        .painel-conteudo h2 {
+            color: #1565c0;
+            font-size: 1.4rem;
+            margin-top: 0;
+        }
+        .btn-acao {
+            background-color: #2e7d32;
+            color: white;
+            border: none;
+            padding: 14px;
+            width: 100%;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .btn-acao:hover {
+            background-color: #1b5e20;
+        }
+        .btn-voltar {
+            background-color: #90caf9;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .info-box {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #0d47a1;
+            text-align: left;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        .progresso-texto {
+            font-weight: bold;
+            color: #d32f2f;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Distribuição de Elencos ⚡</h1>
+    </header>
+
+    <main class="menu-container" style="padding: 10px;">
+        <div class="painel-conteudo" style="display: block;">
+            <h2>Popular Ligas & Clubes</h2>
+            
+            <div class="info-box">
+                <b>Regras do Sorteio Automático:</b>
+                <ul style="margin: 5px 0 0 15px; padding: 0;">
+                    <li>Preenche <b>19 jogadores</b> por clube (5 Atacantes, 3 MO, 3 MD, 5 Zagueiros, 3 Goleiros).</li>
+                    <li>Usa funil de raridade (Ranks E/D mais comuns, Rank Nacional raríssimo).</li>
+                    <li>Embaralha os nomes para evitar acúmulo de letras iguais no mesmo time.</li>
+                </ul>
+            </div>
+
+            <button class="btn-acao" onclick="executarDistribuicaoElencos()">⚡ Distribuir Elencos para Todos os Times</button>
+            <div id="statusProcesso" class="progresso-texto"></div>
+
+            <button class="btn-voltar" onclick="window.location.href='times.html'" style="margin-top: 20px;">Voltar para Times</button>
+        </div>
+    </main>
+
+    <script>
+        const DB_NAME = "FuteBrawlOfflineDB";
+        const DB_VERSION = 2;
+
+        function abrirBancoLocal() {
+            return new Promise((resolve, reject) => {
+                let request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                request.onupgradeneeded = (event) => {
+                    let db = event.target.result;
+                    if (!db.objectStoreNames.contains("times")) db.createObjectStore("times", { keyPath: "id" });
+                    if (!db.objectStoreNames.contains("jogadores")) db.createObjectStore("jogadores", { keyPath: "id" });
+                };
+            });
+        }
+
+        async function lerLocal(storeName) {
+            let db = await abrirBancoLocal();
+            return new Promise((resolve, reject) => {
+                let transaction = db.transaction(storeName, "readonly");
+                let store = transaction.objectStore(storeName);
+                let request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => resolve([]);
+            });
+        }
+
+        async function salvarLocal(storeName, dados) {
+            let db = await abrirBancoLocal();
+            return new Promise((resolve, reject) => {
+                let transaction = db.transaction(storeName, "readwrite");
+                let store = transaction.objectStore(storeName);
+                if (Array.isArray(dados)) {
+                    dados.forEach(item => store.put(item));
+                } else {
+                    store.put(dados);
+                }
+                transaction.oncomplete = () => resolve(true);
+                transaction.onerror = () => reject(transaction.error);
+            });
+        }
+
+        const normalizar = (str) => (str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/-/g, ' ').trim();
+
+        function calcularRankJogador(j) {
+            let posNorm = normalizar(j.posicao);
+            let valorAtributo = 0;
+
+            if (posNorm.includes('goleiro')) valorAtributo = j.reflexo || 0;
+            else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) valorAtributo = j.marcacao || 0;
+            else valorAtributo = Math.max(j.velocidade || 0, j.precisao || 0, j.assistencia || 0);
+
+            if (valorAtributo <= 0) return 'Rank-E';
+            if (valorAtributo === 1) return 'Rank-D';
+            if (valorAtributo === 2) return 'Rank-C';
+            if (valorAtributo === 3) return 'Rank-B';
+            if (valorAtributo === 4) return 'Rank-A';
+            if (valorAtributo === 5) return 'Rank-S';
+            return 'Rank nacional';
+        }
+
+        function sortearRankPonderado() {
+            let r = Math.random() * 100;
+            if (r < 38) return 'Rank-E';      // 38%
+            if (r < 68) return 'Rank-D';      // 30%
+            if (r < 86) return 'Rank-C';      // 18%
+            if (r < 94) return 'Rank-B';      // 8%
+            if (r < 98) return 'Rank-A';      // 4%
+            if (r < 99.7) return 'Rank-S';    // 1.7%
+            return 'Rank nacional';           // 0.3%
+        }
+
+        function embaralharArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                let j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        async function executarDistribuicaoElencos() {
+            let statusEl = document.getElementById('statusProcesso');
+            statusEl.innerText = "Lendo clubes e atletas do banco local...";
+
+            let times = await lerLocal("times");
+            let jogadores = await lerLocal("jogadores");
+
+            if (!times || times.length === 0) {
+                alert("Nenhum time cadastrado no banco!");
+                statusEl.innerText = "";
+                return;
+            }
+
+            if (!jogadores || jogadores.length === 0) {
+                alert("Nenhum jogador cadastrado no banco! Crie jogadores primeiro.");
+                statusEl.innerText = "";
+                return;
+            }
+
+            statusEl.innerText = "Limpando vínculos antigos...";
+            jogadores.forEach(j => { j.time_id = null; });
+
+            let poolGoleiros = embaralharArray(jogadores.filter(j => normalizar(j.posicao).includes('goleiro')));
+            let poolZagueiros = embaralharArray(jogadores.filter(j => normalizar(j.posicao).includes('zagueiro')));
+            let poolMD = embaralharArray(jogadores.filter(j => normalizar(j.posicao).includes('meia defensivo')));
+            let poolMO = embaralharArray(jogadores.filter(j => normalizar(j.posicao).includes('meia ofensivo') || (normalizar(j.posicao).includes('meia') && !normalizar(j.posicao).includes('defensiv'))));
+            let poolAtacantes = embaralharArray(jogadores.filter(j => normalizar(j.posicao).includes('atacante')));
+
+            statusEl.innerText = "Distribuindo elencos equilibrados...";
+
+            function puxarAtletaPorRank(pool, rankAlvo) {
+                let idx = pool.findIndex(j => !j.atribuidoTemp && calcularRankJogador(j) === rankAlvo);
+                if (idx !== -1) {
+                    pool[idx].atribuidoTemp = true;
+                    return pool[idx];
+                }
+                let idxAlt = pool.findIndex(j => !j.atribuidoTemp);
+                if (idxAlt !== -1) {
+                    pool[idxAlt].atribuidoTemp = true;
+                    return pool[idxAlt];
+                }
+                return null;
+            }
+
+            times.forEach(t => {
+                let metas = {
+                    'Goleiro': 3,
+                    'Zagueiro': 5,
+                    'Meia defensivo': 3,
+                    'Meia ofensivo': 3,
+                    'Atacante': 5
+                };
+
+                let poolsMap = {
+                    'Goleiro': poolGoleiros,
+                    'Zagueiro': poolZagueiros,
+                    'Meia defensivo': poolMD,
+                    'Meia ofensivo': poolMO,
+                    'Atacante': poolAtacantes
+                };
+
+                for (let pos in metas) {
+                    let qtd = metas[pos];
+                    let poolAtiv = poolsMap[pos];
+
+                    for (let i = 0; i < qtd; i++) {
+                        let rankSorteado = sortearRankPonderado();
+                        let atleta = puxarAtletaPorRank(poolAtiv, rankSorteado);
+                        if (atleta) {
+                            atleta.time_id = t.id;
+                        }
+                    }
+                }
+            });
+
+            statusEl.innerText = "Salvando alterações no banco local...";
+            await salvarLocal("jogadores", jogadores);
+
+            statusEl.innerText = "✅ Elencos distribuídos com sucesso!";
+            alert("Sucesso! Todos os times agora possuem planteis completos e balanceados.");
+            window.location.href = 'times.html';
+        }
+    </script>
+</body>
+</html>

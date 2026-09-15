@@ -289,6 +289,8 @@
         <a href="#" class="btn" onclick="abrirVisualizarTimes()">Visualizar times</a>
         <a href="#" class="btn" onclick="abrirEditarTimes()">Editar times</a>
         <a href="#" class="btn" onclick="abrirCriarTime()">Criar um novo time</a>
+        <!-- BOTÃO DE DISTRIBUIÇÃO ADICIONADO AQUI -->
+        <a href="distribuicao.html" class="btn" onclick="mudarTela(event, 'distribuicao.html')" style="background-color: #2e7d32;">⚡ Distribuir Elencos Iniciais</a>
         <a href="jogadores.html" class="btn" onclick="mudarTela(event, 'jogadores.html')">Jogadores</a>
         <a href="habilidades.html" class="btn" onclick="mudarTela(event, 'habilidades.html')">Habilidades</a>
         <a href="suporte.html" class="btn" onclick="mudarTela(event, 'suporte.html')" style="background-color: #ff9800;">Suporte</a>
@@ -2313,7 +2315,7 @@
             const inputCam2Edit = document.getElementById('editCamisa2');
 
             if (!novoNome) {
-                alert("O nome do time não pode ficar vazio.");
+                alert("O nome não pode ficar vazio.");
                 return;
             }
 
