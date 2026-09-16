@@ -58,7 +58,7 @@
             height: 20px;
             background-color: #4caf50;
             width: 0%;
-            transition: width 0.15s ease;
+            transition: width 0.19s ease;
         }
         .lista-resultados {
             max-height: 350px;
@@ -342,7 +342,7 @@
             let partidaRef = todasPendentes[0];
             document.getElementById('tituloFase').innerText = `Simulação Rápida - ${partidaRef.fase}`;
 
-            partidasParaSimular = todasPendentes.slice(0, 15);
+            partidasParaSimular = todasPendentes.slice(0, 19);
 
             executarSimulacaoEmLoteLocal();
         }
