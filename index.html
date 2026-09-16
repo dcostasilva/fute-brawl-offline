@@ -606,7 +606,6 @@
             });
         }
 
-        // FUNÇÃO ATUALIZADA: Permite abertura 100% offline e sincroniza na nuvem se houver internet
         async function inicializarOuSincronizarDadosLocal() {
             let timesLocais = await lerLocal("times");
             if (!timesLocais || timesLocais.length === 0) {
@@ -685,7 +684,7 @@
 
             let qtdBase = contagem["Região 1"];
             if (qtdBase < 4 || qtdBase % 2 !== 0) {
-                return true; // Se ainda não cadastrou nada, deixa passar para não bloquear a tela de escolha
+                return true; 
             }
 
             for (let r of regioes) {
@@ -697,7 +696,6 @@
             return true;
         }
 
-        // FUNÇÃO ATUALIZADA: Distribui os times de forma perfeitamente igual entre as 4 ligas (divisível por 4)
         async function garantirDistribuicaoDivisoesExataLocal() {
             if (!timesCache || timesCache.length === 0) return;
             let ligas = ["Liga A", "Liga B", "Liga C", "Liga D"];
@@ -705,10 +703,6 @@
             
             let qtdPorLiga = Math.floor(totalTimes / 4);
             let resto = totalTimes % 4;
-
-            if (resto !== 0 && totalTimes > 0) {
-                console.warn("Aviso: O número total de times cadastrados não é perfeitamente divisível por 4.");
-            }
 
             let idx = 0;
             let alterou = false;
@@ -1127,6 +1121,7 @@
             });
         }
 
+        // FUNÇÃO ATUALIZADA: Lista por posições e ordem alfabética no perfil rápido do time
         async function abrirPerfilRapidoTime(timeId) {
             let t = timesCache.find(x => x.id === timeId);
             if (!t) return;
@@ -1141,7 +1136,6 @@
 
             jogadoresCache = await lerLocal("jogadores");
             let elencoTime = jogadoresCache.filter(j => j.time_id === timeId);
-            elencoTime.sort((a,b) => (a.numero||99) - (b.numero||99));
 
             let listaElencoEl = document.getElementById('prElencoLista');
             listaElencoEl.innerHTML = '';
@@ -1149,29 +1143,52 @@
             if (elencoTime.length === 0) {
                 listaElencoEl.innerHTML = '<p style="text-align:center; color:#666;">Nenhum jogador no elenco.</p>';
             } else {
-                for (let j of elencoTime) {
-                    let r = calcularRankJogador(j);
-                    let posNorm = normalizar(j.posicao);
-                    let attrTxt = '';
-                    if (posNorm.includes('goleiro')) attrTxt = `Reflexo: ${j.reflexo||0}`;
-                    else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) attrTxt = `Marcação: ${j.marcacao||0}`;
-                    else attrTxt = `Vel:${j.velocidade||0} | Prec:${j.precisao||0} | Assis:${j.assistencia||0}`;
+                // Organiza e ordena alfabeticamente os jogadores por nome dentro de cada grupo de posição
+                let ordenarPorNome = (a, b) => (a.nome || '').localeCompare(b.nome || '');
 
-                    let estrelaHtml = j.habilidade_id ? ` <span class="estrela-habilidade" title="Ver Habilidade" onclick="mostrarBalaoEstrela(event, '${j.habilidade_id}')">⭐</span>` : '';
+                let goleiro = elencoTime.filter(j => normalizar(j.posicao).includes('goleiro')).sort(ordenarPorNome);
+                let zagueiros = elencoTime.filter(j => normalizar(j.posicao).includes('zagueiro')).sort(ordenarPorNome);
+                let mdList = elencoTime.filter(j => normalizar(j.posicao).includes('meia defensivo')).sort(ordenarPorNome);
+                let moList = elencoTime.filter(j => normalizar(j.posicao).includes('meia ofensivo') || (normalizar(j.posicao).includes('meia') && !normalizar(j.posicao).includes('defensiv'))).sort(ordenarPorNome);
+                let atacantes = elencoTime.filter(j => normalizar(j.posicao).includes('atacante')).sort(ordenarPorNome);
 
-                    listaElencoEl.innerHTML += `
-                        <div style="background: #fff; padding: 6px; border-radius: 6px; margin-bottom: 4px; border: 1px solid #e3f2fd; display:flex; justify-content:space-between; align-items:center;">
-                            <div>
-                                <b>#${j.numero || '--'} - ${j.nome}</b> ${estrelaHtml} (${j.posicao})<br>
-                                <small style="color:#555;">${attrTxt}</small>
-                            </div>
-                            <div>
-                                <span class="badge-rank" style="background:${r.cor};">${r.nome}</span><br>
-                                <small>⚡${j.energia ?? 2}/2</small>
-                            </div>
-                        </div>
-                    `;
-                }
+                let grupos = [
+                    { titulo: "Goleiro", lista: goleiro },
+                    { titulo: "Zagueiro", lista: zagueiros },
+                    { titulo: "Meia Defensivo", lista: mdList },
+                    { titulo: "Meia Ofensivo", lista: moList },
+                    { titulo: "Atacante", lista: atacantes }
+                ];
+
+                grupos.forEach(grupo => {
+                    if (grupo.lista.length > 0) {
+                        listaElencoEl.innerHTML += `<div style="font-weight:bold; color:#1565c0; margin:6px 0 2px 0; border-bottom:1px solid #e3f2fd; font-size:0.82rem; text-transform:uppercase;">${grupo.titulo}</div>`;
+                        
+                        grupo.lista.forEach(j => {
+                            let r = calcularRankJogador(j);
+                            let posNorm = normalizar(j.posicao);
+                            let attrTxt = '';
+                            if (posNorm.includes('goleiro')) attrTxt = `Reflexo: ${j.reflexo||0}`;
+                            else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) attrTxt = `Marcação: ${j.marcacao||0}`;
+                            else attrTxt = `Vel:${j.velocidade||0} | Prec:${j.precisao||0} | Assis:${j.assistencia||0}`;
+
+                            let estrelaHtml = j.habilidade_id ? ` <span class="estrela-habilidade" title="Ver Habilidade" onclick="mostrarBalaoEstrela(event, '${j.habilidade_id}')">⭐</span>` : '';
+
+                            listaElencoEl.innerHTML += `
+                                <div style="background: #fff; padding: 6px; border-radius: 6px; margin-bottom: 4px; border: 1px solid #e3f2fd; display:flex; justify-content:space-between; align-items:center;">
+                                    <div>
+                                        <b>#${j.numero || '--'} - ${j.nome}</b> ${estrelaHtml}<br>
+                                        <small style="color:#555;">${attrTxt}</small>
+                                    </div>
+                                    <div>
+                                        <span class="badge-rank" style="background:${r.cor};">${r.nome}</span><br>
+                                        <small>⚡${j.energia ?? 2}/2</small>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                });
             }
 
             document.getElementById('painelProximosJogos').style.display = 'none';
@@ -1183,6 +1200,7 @@
             document.getElementById('painelProximosJogos').style.display = 'block';
         }
 
+        // FUNÇÃO ATUALIZADA: Lista por posições e ordem alfabética no histórico/detalhes da partida
         async function abrirDetalhesPartidaHistorico(partidaId) {
             let partidasLocal = await lerLocal("partidas");
             let p = partidasLocal.find(x => x.id === partidaId);
@@ -1241,27 +1259,50 @@
                     return;
                 }
 
-                titularesDaPartida.forEach(j => {
-                    let st = statsDestaPartida.find(s => s.jogador_id === j.id) || { gols: 0, assistencias_gols: 0, desarmes: 0, defesas: 0 };
-                    let r = calcularRankJogador(j);
-                    let posNorm = normalizar(j.posicao);
-                    let resumoStats = '';
-                    let estrelaHtml = j.habilidade_id ? ` <span class="estrela-habilidade" title="Ver Habilidade" onclick="mostrarBalaoEstrela(event, '${j.habilidade_id}')">⭐</span>` : '';
-                    let seloMvpCard = listaMVPs.some(m => m.id === j.id) ? ` <span style="background:#ff9800; color:#fff; font-size:0.55rem; padding:1px 4px; border-radius:3px; font-weight:bold;">MVP ⭐</span>` : '';
+                // Organiza e ordena alfabeticamente os jogadores por nome dentro de cada grupo de posição
+                let ordenarPorNome = (a, b) => (a.nome || '').localeCompare(b.nome || '');
 
-                    if (posNorm.includes('goleiro')) resumoStats = `Defesas: ${st.defesas}`;
-                    else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) resumoStats = `Desarmes: ${st.desarmes}`;
-                    else resumoStats = `Gols: ${st.gols} | Assis: ${st.assistencias_gols} | Desarmes: ${st.desarmes}`;
+                let goleiro = titularesDaPartida.filter(j => normalizar(j.posicao).includes('goleiro')).sort(ordenarPorNome);
+                let zagueiros = titularesDaPartida.filter(j => normalizar(j.posicao).includes('zagueiro')).sort(ordenarPorNome);
+                let mdList = titularesDaPartida.filter(j => normalizar(j.posicao).includes('meia defensivo')).sort(ordenarPorNome);
+                let moList = titularesDaPartida.filter(j => normalizar(j.posicao).includes('meia ofensivo') || (normalizar(j.posicao).includes('meia') && !normalizar(j.posicao).includes('defensiv'))).sort(ordenarPorNome);
+                let atacantes = titularesDaPartida.filter(j => normalizar(j.posicao).includes('atacante')).sort(ordenarPorNome);
 
-                    box.innerHTML += `
-                        <div style="background:#fff; padding:6px; border-radius:4px; margin-bottom:4px; border:1px solid #d0e8ff;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <b>#${j.numero||'--'} ${j.nome.split(' ')[0]}</b> ${estrelaHtml}${seloMvpCard}
-                                <span class="badge-rank" style="background:${r.cor}; font-size:0.6rem;">${r.nome}</span>
-                            </div>
-                            <small style="color:#444;">${resumoStats}</small>
-                        </div>
-                    `;
+                let grupos = [
+                    { titulo: "Goleiro", lista: goleiro },
+                    { titulo: "Zagueiro", lista: zagueiros },
+                    { titulo: "Meia Defensivo", lista: mdList },
+                    { titulo: "Meia Ofensivo", lista: moList },
+                    { titulo: "Atacante", lista: atacantes }
+                ];
+
+                grupos.forEach(grupo => {
+                    if (grupo.lista.length > 0) {
+                        box.innerHTML += `<div style="font-weight:bold; color:#1565c0; margin:4px 0 2px 0; border-bottom:1px solid #c0d8ff; font-size:0.72rem; text-transform:uppercase;">${grupo.titulo}</div>`;
+
+                        grupo.lista.forEach(j => {
+                            let st = statsDestaPartida.find(s => s.jogador_id === j.id) || { gols: 0, assistencias_gols: 0, desarmes: 0, defesas: 0 };
+                            let r = calcularRankJogador(j);
+                            let posNorm = normalizar(j.posicao);
+                            let resumoStats = '';
+                            let estrelaHtml = j.habilidade_id ? ` <span class="estrela-habilidade" title="Ver Habilidade" onclick="mostrarBalaoEstrela(event, '${j.habilidade_id}')">⭐</span>` : '';
+                            let seloMvpCard = listaMVPs.some(m => m.id === j.id) ? ` <span style="background:#ff9800; color:#fff; font-size:0.55rem; padding:1px 4px; border-radius:3px; font-weight:bold;">MVP ⭐</span>` : '';
+
+                            if (posNorm.includes('goleiro')) resumoStats = `Defesas: ${st.defesas}`;
+                            else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) resumoStats = `Desarmes: ${st.desarmes}`;
+                            else resumoStats = `Gols: ${st.gols} | Assis: ${st.assistencias_gols} | Desarmes: ${st.desarmes}`;
+
+                            box.innerHTML += `
+                                <div style="background:#fff; padding:6px; border-radius:4px; margin-bottom:4px; border:1px solid #d0e8ff;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <b>#${j.numero||'--'} ${j.nome.split(' ')[0]}</b> ${estrelaHtml}${seloMvpCard}
+                                        <span class="badge-rank" style="background:${r.cor}; font-size:0.6rem;">${r.nome}</span>
+                                    </div>
+                                    <small style="color:#444;">${resumoStats}</small>
+                                </div>
+                            `;
+                        });
+                    }
                 });
             }
 
@@ -1319,7 +1360,7 @@
         function renderizarSeletorCardsModal(elenco) {
             let elencoApto = elenco.filter(j => (j.idade || 20) < 40 && !j.aposentado);
 
-            let goleiros = elencoApto.filter(j => normalizar(j.posicao).includes('goleiro'));
+            let goleiro = elencoApto.filter(j => normalizar(j.posicao).includes('goleiro'));
             let zagueiros = elencoApto.filter(j => normalizar(j.posicao).includes('zagueiro'));
             let mdList = elencoApto.filter(j => normalizar(j.posicao).includes('meia defensivo'));
             let moList = elencoApto.filter(j => normalizar(j.posicao).includes('meia ofensivo') || (normalizar(j.posicao).includes('meia') && !normalizar(j.posicao).includes('defensivo')));
@@ -1327,7 +1368,7 @@
 
             let container = document.getElementById('formacaoContainerCards');
             container.innerHTML = `
-                ${criarSecaoCards('1 Goleiro (GO)', goleiros, 'goleiro', 'goleiro')}
+                ${criarSecaoCards('1 Goleiro (GO)', goleiro, 'goleiro', 'goleiro')}
                 ${criarSecaoCards('Zagueiro 1 (ZA)', zagueiros, 'zag1', 'zaga_md')}
                 ${criarSecaoCards('Zagueiro 2 (ZA)', zagueiros, 'zag2', 'zaga_md')}
                 ${criarSecaoCards('1 Meia Defensivo (MD)', mdList, 'md', 'zaga_md')}

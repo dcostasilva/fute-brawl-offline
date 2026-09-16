@@ -1281,7 +1281,6 @@
             let jogadoresTime = jogadoresLocal.filter(j => j.time_id === timeId && !j.aposentado);
             let jogadoresAposentadosTime = jogadoresLocal.filter(j => j.time_id === timeId && j.aposentado);
 
-            jogadoresTime.sort((a,b) => (a.numero || 99) - (b.numero || 99));
             jogadoresAposentadosTime.sort((a,b) => a.nome.localeCompare(b.nome));
 
             let statsPartidasLocal = await lerLocal("estatisticas_partida_jogadores");
@@ -1325,6 +1324,7 @@
             renderizarListaElenco();
         }
 
+        // FUNÇÃO ATUALIZADA: Lista por posições e ordem alfabética no perfil do time
         function renderizarListaElenco() {
             const jContainer = document.getElementById('perfilJogadoresLista');
             if (elencoAtualCache.length === 0) {
@@ -1333,57 +1333,81 @@
             }
 
             jContainer.innerHTML = '';
-            elencoAtualCache.forEach(j => {
-                let numeroCamisa = j.numero ? `#${j.numero}` : '#--';
-                let infoExtra = '';
-                let rank = calcularRankJogador(j);
-                let badgeRankHtml = `<span class="badge-rank" style="background-color: ${rank.cor};">${rank.nome}</span>`;
-                let estrelaHtml = j.habilidade_id ? `<span class="estrela-habilidade" title="Ver Habilidade" onclick="mostrarBalaoEstrela(event, '${j.habilidade_id}')">⭐</span>` : '';
 
-                let energiaAtual = j.energia ?? 2;
-                let badgeEnergiaHtml = energiaAtual === 0 
-                    ? `<span class="badge-energia-zero" title="Jogador exausto! Bloqueado para escalação.">⚡ Exausto (0/2)</span>` 
-                    : `<span style="font-size:0.75rem; color:#555;">(⚡ ${energiaAtual}/2)</span>`;
+            // Ordena alfabeticamente por nome dentro de cada grupo
+            let ordenarPorNome = (a, b) => (a.nome || '').localeCompare(b.nome || '');
 
-                let classeLinhaExausto = energiaAtual === 0 ? 'jogador-linha exausto' : 'jogador-linha';
-                let posNorm = normalizar(j.posicao);
-                let st = j.estatisticas || { partidas: 0, gols: 0, assistencias_gols: 0, assistencia_def: 0, desarmes: 0, defesas: 0 };
+            let goleiro = elencoAtualCache.filter(j => normalizar(j.posicao).includes('goleiro')).sort(ordenarPorNome);
+            let zagueiros = elencoAtualCache.filter(j => normalizar(j.posicao).includes('zagueiro')).sort(ordenarPorNome);
+            let mdList = elencoAtualCache.filter(j => normalizar(j.posicao).includes('meia defensivo')).sort(ordenarPorNome);
+            let moList = elencoAtualCache.filter(j => normalizar(j.posicao).includes('meia ofensivo') || (normalizar(j.posicao).includes('meia') && !normalizar(j.posicao).includes('defensiv'))).sort(ordenarPorNome);
+            let atacantes = elencoAtualCache.filter(j => normalizar(j.posicao).includes('atacante')).sort(ordenarPorNome);
 
-                if (modoElencoAtual === 'atributos') {
-                    if (posNorm.includes('goleiro')) {
-                        infoExtra = `<small style="display:block; color:#555; margin-top:2px;">Reflexo: ${j.reflexo||0} | Idade: ${j.idade??20}a</small>`;
-                    } else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
-                        infoExtra = `<small style="display:block; color:#555; margin-top:2px;">Marcação: ${j.marcacao||0} | Idade: ${j.idade??20}a</small>`;
-                    } else {
-                        infoExtra = `<small style="display:block; color:#555; margin-top:2px;">Vel:${j.velocidade||0} | Prec:${j.precisao||0} | Idade: ${j.idade??20}a</small>`;
-                    }
-                } else {
-                    if (posNorm.includes('goleiro')) {
-                        infoExtra = `<small style="display:block; color:#1565c0; margin-top:2px;">Partidas: ${st.partidas} | Defesas: ${st.defesas}</small>`;
-                    } else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
-                        infoExtra = `<small style="display:block; color:#1565c0; margin-top:2px;">Partidas: ${st.partidas} | Desarmes: ${st.desarmes} | Assis. Def: ${st.assistencia_def}</small>`;
-                    } else {
-                        infoExtra = `<small style="display:block; color:#1565c0; margin-top:2px;">Partidas: ${st.partidas} | Gols: ${st.gols} | Assistências: ${st.assistencias_gols}</small>`;
-                    }
-                }
+            let grupos = [
+                { titulo: "Goleiro", lista: goleiro },
+                { titulo: "Zagueiro", lista: zagueiros },
+                { titulo: "Meia Defensivo", lista: mdList },
+                { titulo: "Meia Ofensivo", lista: moList },
+                { titulo: "Atacante", lista: atacantes }
+            ];
 
-                jContainer.innerHTML += `
-                    <div class="${classeLinhaExausto}">
-                        <div class="jogador-info-mini">
-                            <div class="jogador-topo-linha" onclick='verPerfilJogador(${JSON.stringify(j)})'>
-                                <span class="jogador-link">${numeroCamisa} - ${j.nome} (${j.posicao || 'Geral'})</span> 
-                                ${badgeRankHtml} 
-                                ${estrelaHtml}
-                                ${badgeEnergiaHtml}
+            grupos.forEach(grupo => {
+                if (grupo.lista.length > 0) {
+                    jContainer.innerHTML += `<div style="font-weight:bold; color:#1565c0; margin:8px 0 3px 0; border-bottom:1px solid #c0d8ff; font-size:0.85rem; text-transform:uppercase;">${grupo.titulo}</div>`;
+
+                    grupo.lista.forEach(j => {
+                        let numeroCamisa = j.numero ? `#${j.numero}` : '#--';
+                        let infoExtra = '';
+                        let rank = calcularRankJogador(j);
+                        let badgeRankHtml = `<span class="badge-rank" style="background-color: ${rank.cor};">${rank.nome}</span>`;
+                        let estrelaHtml = j.habilidade_id ? `<span class="estrela-habilidade" title="Ver Habilidade" onclick="mostrarBalaoEstrela(event, '${j.habilidade_id}')">⭐</span>` : '';
+
+                        let energiaAtual = j.energia ?? 2;
+                        let badgeEnergiaHtml = energiaAtual === 0 
+                            ? `<span class="badge-energia-zero" title="Jogador exausto! Bloqueado para escalação.">⚡ Exausto (0/2)</span>` 
+                            : `<span style="font-size:0.75rem; color:#555;">(⚡ ${energiaAtual}/2)</span>`;
+
+                        let classeLinhaExausto = energiaAtual === 0 ? 'jogador-linha exausto' : 'jogador-linha';
+                        let posNorm = normalizar(j.posicao);
+                        let st = j.estatisticas || { partidas: 0, gols: 0, assistencias_gols: 0, assistencia_def: 0, desarmes: 0, defesas: 0 };
+
+                        if (modoElencoAtual === 'atributos') {
+                            if (posNorm.includes('goleiro')) {
+                                infoExtra = `<small style="display:block; color:#555; margin-top:2px;">Reflexo: ${j.reflexo||0} | Idade: ${j.idade??20}a</small>`;
+                            } else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
+                                infoExtra = `<small style="display:block; color:#555; margin-top:2px;">Marcação: ${j.marcacao||0} | Idade: ${j.idade??20}a</small>`;
+                            } else {
+                                infoExtra = `<small style="display:block; color:#555; margin-top:2px;">Vel:${j.velocidade||0} | Prec:${j.precisao||0} | Idade: ${j.idade??20}a</small>`;
+                            }
+                        } else {
+                            if (posNorm.includes('goleiro')) {
+                                infoExtra = `<small style="display:block; color:#1565c0; margin-top:2px;">Partidas: ${st.partidas} | Defesas: ${st.defesas}</small>`;
+                            } else if (posNorm.includes('zagueiro') || posNorm.includes('meia defensivo')) {
+                                infoExtra = `<small style="display:block; color:#1565c0; margin-top:2px;">Partidas: ${st.partidas} | Desarmes: ${st.desarmes} | Assis. Def: ${st.assistencia_def}</small>`;
+                            } else {
+                                infoExtra = `<small style="display:block; color:#1565c0; margin-top:2px;">Partidas: ${st.partidas} | Gols: ${st.gols} | Assistências: ${st.assistencias_gols}</small>`;
+                            }
+                        }
+
+                        jContainer.innerHTML += `
+                            <div class="${classeLinhaExausto}">
+                                <div class="jogador-info-mini">
+                                    <div class="jogador-topo-linha" onclick='verPerfilJogador(${JSON.stringify(j)})'>
+                                        <span class="jogador-link">${numeroCamisa} - ${j.nome} (${j.posicao || 'Geral'})</span> 
+                                        ${badgeRankHtml} 
+                                        ${estrelaHtml}
+                                        ${badgeEnergiaHtml}
+                                    </div>
+                                    <div onclick='verPerfilJogador(${JSON.stringify(j)})'>${infoExtra}</div>
+                                </div>
+                                <div class="jogador-acoes-grupo">
+                                    <button class="btn-elenco-acao" onclick="alterarNumeroCamisa(${j.id}, ${j.numero || 0})" title="Trocar número">#</button>
+                                    <button class="btn-remover-jogador" onclick="removerJogadorDoTime(${j.id})">Remover</button>
+                                </div>
                             </div>
-                            <div onclick='verPerfilJogador(${JSON.stringify(j)})'>${infoExtra}</div>
-                        </div>
-                        <div class="jogador-acoes-grupo">
-                            <button class="btn-elenco-acao" onclick="alterarNumeroCamisa(${j.id}, ${j.numero || 0})" title="Trocar número">#</button>
-                            <button class="btn-remover-jogador" onclick="removerJogadorDoTime(${j.id})">Remover</button>
-                        </div>
-                    </div>
-                `;
+                        `;
+                    });
+                }
             });
         }
 
