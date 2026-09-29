@@ -53,7 +53,6 @@
             margin-top: 15px;
             display: block;
             text-align: center;
-            text-decoration: none;
             box-sizing: border-box;
         }
         .btn-voltar {
@@ -95,10 +94,9 @@
         <div style="margin-bottom: 25px;">
             <h3 style="color: #1565c0; font-size: 1.1rem; margin-bottom: 5px;">Restaurar / Importar Save</h3>
             <p>Carrega um arquivo de backup JSON salvo anteriormente no seu dispositivo, substituindo os dados atuais do jogo.</p>
-            <label class="btn-acao-secundaria" style="cursor: pointer;">
-                📤 Selecionar Arquivo e Restaurar
-                <input type="file" id="inputRestaurar" accept=".json" style="display: none;" onchange="importarBackupSave(event)">
-            </label>
+            <!-- Input file real invisível, acionado pelo botão abaixo -->
+            <input type="file" id="inputRestaurar" accept=".json" style="display: none;" onchange="importarBackupSave(event)">
+            <button class="btn-acao-secundaria" onclick="document.getElementById('inputRestaurar').click()">📤 Selecionar Arquivo e Restaurar</button>
         </div>
 
         <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
@@ -201,14 +199,12 @@
             });
         }
 
-        // FUNÇÃO DE EXPORTAR (Gera arquivo de elocong limpos/padrão)
         async function exportarBackupElencosLimpos() {
             try {
                 let times = await lerLocal("times");
                 let jogadores = await lerLocal("jogadores");
                 let habilidades = await lerLocal("habilidades_custom");
 
-                // Limpa estatísticas de times e jogadores para o arquivo base
                 times.forEach(t => {
                     t.jogos = 0; t.vitorias = 0; t.empates = 0; t.derrotas = 0;
                     t.gols_pro = 0; t.gols_contra = 0; t.titulos_liga = 0;
@@ -252,7 +248,6 @@
             }
         }
 
-        // FUNÇÃO DE IMPORTAR (Restaura o save do JSON)
         async function importarBackupSave(event) {
             let arquivo = event.target.files[0];
             if (!arquivo) return;
@@ -348,8 +343,8 @@
 
         async function apagarTodasPartidasLocal() {
             if (!confirm("ATENÇÃO: Deseja realmente apagar TODAS as partidas registradas no dispositivo?")) return;
-            await limparStoreLocal("partidas");
-            alert("🗑️ Todas as partidas locais foram apagadas com sucesso!");
+            await limparStoreLineLocal("partidas");
+            alert("🗑️ Toutes as partidas locais foram apagadas com sucesso!");
         }
 
         async function apagarTodasTemporadasLocal() {
