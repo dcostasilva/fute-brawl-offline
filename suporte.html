@@ -28,6 +28,34 @@
             cursor: pointer;
             margin-top: 15px;
         }
+        .btn-sucesso {
+            background-color: #2e7d32;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        .btn-acao-secundaria {
+            background-color: #1565c0;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            display: block;
+            text-align: center;
+            text-decoration: none;
+            box-sizing: border-box;
+        }
         .btn-voltar {
             background-color: #90caf9;
             color: #fff;
@@ -56,6 +84,23 @@
     <main class="menu-container">
         <h2>Painel de Manutenção</h2>
         <p>Ferramentas locais de redefinição e limpeza de dados do jogo.</p>
+        <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+
+        <div style="margin-bottom: 25px;">
+            <h3 style="color: #2e7d32; font-size: 1.1rem; margin-bottom: 5px;">Backup / Exportar Elencos (Limpo)</h3>
+            <p>Baixa um arquivo JSON contendo todos os times, jogadores (com atributos, nomes, Ranks e regiões) e habilidades, mas com estatísticas e finanças zeradas.</p>
+            <button class="btn-sucesso" onclick="exportarBackupElencosLimpos()">📥 Baixar Backup de Elencos (JSON)</button>
+        </div>
+
+        <div style="margin-bottom: 25px;">
+            <h3 style="color: #1565c0; font-size: 1.1rem; margin-bottom: 5px;">Restaurar / Importar Save</h3>
+            <p>Carrega um arquivo de backup JSON salvo anteriormente no seu dispositivo, substituindo os dados atuais do jogo.</p>
+            <label class="btn-acao-secundaria" style="cursor: pointer;">
+                📤 Selecionar Arquivo e Restaurar
+                <input type="file" id="inputRestaurar" accept=".json" style="display: none;" onchange="importarBackupSave(event)">
+            </label>
+        </div>
+
         <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
 
         <div style="margin-bottom: 25px;">
@@ -156,6 +201,95 @@
             });
         }
 
+        // FUNÇÃO DE EXPORTAR (Gera arquivo de elocong limpos/padrão)
+        async function exportarBackupElencosLimpos() {
+            try {
+                let times = await lerLocal("times");
+                let jogadores = await lerLocal("jogadores");
+                let habilidades = await lerLocal("habilidades_custom");
+
+                // Limpa estatísticas de times e jogadores para o arquivo base
+                times.forEach(t => {
+                    t.jogos = 0; t.vitorias = 0; t.empates = 0; t.derrotas = 0;
+                    t.gols_pro = 0; t.gols_contra = 0; t.titulos_liga = 0;
+                    t.titulos_regional = 0; t.titulos_mundial = 0; t.mundiais = 0;
+                    t.regionais = 0; t.liga = 0; t.dinheiro = 5000000;
+                });
+
+                jogadores.forEach(j => {
+                    j.energia = 2; j.gols = 0; j.partidas = 0;
+                    j.assistencia_gols = 0; j.assistencia_defensiva = 0;
+                    j.desarmes = 0; j.defesas = 0; j.conquistas = [];
+                    j.mundiais = 0; j.regionais = 0; j.liga = 0;
+                    j.aposentado = false;
+                });
+
+                let pacoteBackup = {
+                    versao: "2.0",
+                    dataCriacao: new Date().toISOString(),
+                    dados: {
+                        times: times,
+                        jogadores: jogadores,
+                        habilidades_custom: habilidades,
+                        partidas: [],
+                        temporadas: [],
+                        historico_financeiro: []
+                    }
+                };
+
+                let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(pacoteBackup, null, 2));
+                let downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `fute_brawl_backup_elencos_${new Date().toISOString().slice(0,10)}.json`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+
+                alert("📥 Backup de elencos limpos gerado e baixado com sucesso!");
+            } catch (err) {
+                console.error("Erro ao gerar backup:", err);
+                alert("Erro ao exportar arquivo de backup.");
+            }
+        }
+
+        // FUNÇÃO DE IMPORTAR (Restaura o save do JSON)
+        async function importarBackupSave(event) {
+            let arquivo = event.target.files[0];
+            if (!arquivo) return;
+
+            if (!confirm("⚠️ ATENÇÃO: Restaurar este backup vai substituir todos os dados atuais do seu save no dispositivo. Deseja continuar?")) {
+                event.target.value = "";
+                return;
+            }
+
+            let reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    let conteudo = JSON.parse(e.target.result);
+                    let dados = conteudo.dados;
+                    if (!dados) throw new Error("Formato de arquivo inválido.");
+
+                    let stores = ["times", "jogadores", "partidas", "temporadas", "historico_financeiro", "estatisticas_partida_jogadores", "habilidades_custom"];
+                    
+                    for (let storeName of stores) {
+                        await limparStoreLocal(storeName);
+                        if (dados[storeName] && Array.isArray(dados[storeName]) && dados[storeName].length > 0) {
+                            await salvarLocal(storeName, dados[storeName]);
+                        }
+                    }
+
+                    alert("✅ Backup restaurado com sucesso! A página será recarregada.");
+                    window.location.reload();
+                } catch (err) {
+                    console.error("Erro ao processar arquivo:", err);
+                    alert("❌ Erro ao ler o arquivo de backup. Certifique-se de que é um arquivo JSON válido do Fute-Brawl.");
+                } finally {
+                    event.target.value = "";
+                }
+            };
+            reader.readAsText(arquivo);
+        }
+
         async function zerarEstatisticasGeraisLocal() {
             if (!confirm("ATENÇÃO: Deseja realmente zerar estatísticas, títulos, medalhas, reativar aposentados e redefinir as idades dos atletas aleatoriamente entre 16 e 20 anos?")) return;
 
@@ -172,8 +306,8 @@
                 j.mundiais = 0;
                 j.regionais = 0;
                 j.liga = 0;
-                j.aposentado = false; // Reativa atletas que estavam aposentados
-                j.idade = Math.floor(Math.random() * (20 - 16 + 1)) + 16; // Idade aleatória entre 16 e 20 (inclusive)
+                j.aposentado = false;
+                j.idade = Math.floor(Math.random() * (20 - 16 + 1)) + 16;
             });
             await salvarLocal("jogadores", jogadores);
             await limparStoreLocal("estatisticas_partida_jogadores");
